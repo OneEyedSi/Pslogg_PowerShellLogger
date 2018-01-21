@@ -1,9 +1,51 @@
 ﻿<#
 .SYNOPSIS
-Functions for logging messages to the console and, optionally, a log file.
+Functions for logging messages to the host or to PowerShell streams and, optionally, to a log file.
 
 .DESCRIPTION
-A module for logging messages to the console and, optionally, a log file.
+A module for logging messages to the host or to PowerShell streams, such as the Error stream or 
+the Information stream.  In addition, messages may optionally be logged to a log file.
+
+Messages are logged using the Write-LogMessage function.
+
+The logging configuration is flexible and powerful, allowing the following properties of log 
+messages to be changed:
+
+    1) The log level:  This determines whether a log message will be logged or not.  
+        
+        Possible log levels, in order from lowest to highest, are:
+            "Off"
+            "Error"
+            "Warning"
+            "Information"
+            "Debug"
+            "Verbose" 
+
+        Only log messages at a level the same as or lower than the LogLevel will be logged.  For 
+        example, if the LogLevel is "Information" then only log messages at a level of 
+        Information, Warning or Error will be logged.  Messages at a level of Debug or Verbose 
+        will not be logged, as these log levels are higher than Information;
+
+    2) The message destination:  Messages may be written to the host or to PowerShell streams such 
+        as the Information stream or the Verbose stream.  In addition, if a log file name is 
+        set in the logging configuration, the messages will be written to a log file;
+
+    3) The host text color:  Messages written to the host, as opposed to PowerShell streams, may 
+        be written in any PowerShell console color.  Different colors may be specified for 
+        different message types, such as Error, Warning or Information;
+
+    4) The message format:  In addition to the specified message, the text written to the log may 
+        include additional fields that are automatically populated, such as a timestamp or the  
+        name of the function writing to the log.  The format of the logged text, including the 
+        fields to be displayed, may be specified in the logging configuration.
+
+The logging configuration may be altered via function Set-LogConfiguration.  Function 
+Get-LogConfiguration will return a copy of the current configuration as a hash table.  The 
+configuration can be reset back to its default values via function Reset-LogConfiguration.
+
+Several configuration settings can be overridden when writing a single log message.  The changes 
+apply only to that one message; subsequent messages will return to using the settings in the 
+logging configuration.
 
 .NOTES
 
@@ -104,7 +146,8 @@ messages to be changed:
         will not be logged, as these log levels are higher than Information;
 
     2) The message destination:  Messages may be written to the host or to PowerShell streams such 
-        as the Information stream or the Verbose stream;
+        as the Information stream or the Verbose stream.  In addition, if a log file name is 
+        set in the logging configuration, the messages will be written to a log file;
 
     3) The host text color:  Messages written to the host, as opposed to PowerShell streams, may 
         be written in any PowerShell console color.  Different colors may be specified for 
@@ -123,7 +166,7 @@ For more details on the log configuration and how to set it view the help topics
 Get-LogConfiguration and Set-LogConfiguration.
 
 Several configuration settings can be overridden when writing a single log message.  The changes 
-apply only to that one message; Subsequent messages will return to using the settings in the 
+apply only to that one message; subsequent messages will return to using the settings in the 
 logging configuration.  Settings that can be overridden on a per-message basis are:
 
     1) The message destination:  The message can be logged to a different destination from the 
