@@ -1649,12 +1649,12 @@ function Private_ValidateSwitchParameterGroup (
 	
 	[parameter(Mandatory=$True)]
     [ValidateNotNull()]
-    [ValidateNotEmptyString()]
+    [ValidateNotNullOrEmpty()]
 	[string]$ErrorMessage
 	)
 {
 	# Can't use "if ($SwitchList.Count -gt 1)..." because it will always be true, even if no 
-	# switches are set when calling Write-Something2.  If one of the switch parameters is not 
+	# switches are set when calling the parent function.  If one of the switch parameters is not 
 	# set it will still be passed to this function but with value $False.	
 	# Could use ".Where{$_}" but ".Where{$_ -eq $True}" is easier to understand.
 	if ($SwitchList.Where{$_ -eq $True}.Count -gt 1)
@@ -1729,10 +1729,10 @@ function Private_GetTimestampFormat ([string]$MessageFormat)
 	
     # -imatch is a case insensitive regex match.
     # No need to compile the regex as it won't be used often.
-    $isMatch = $textToModify -imatch $regexPattern
+    $isMatch = $MessageFormat -imatch $regexPattern
 	if ($isMatch -and $Matches.Count -ge 2)
 	{
-		return $Matches[1]
+		return $Matches[1].Trim()
 	}
 
     return $Null
@@ -1815,7 +1815,7 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
     # The regex can handle zero or more white spaces (spaces or tabs) between the curly braces 
     # and the placeholder name.  eg "{ Messages}", '{  Messages   }".
     # No need to compile the regex as it won't be used often.
-    $modifiedText = $workingFormat -ireplace '{\s*Message\s*}', '$Message'
+    $modifiedText = $workingFormat -ireplace '{\s*Message\s*}', '${Message}'
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "Message"
@@ -1831,35 +1831,35 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
     # not escape the "$" in "$timestampFormat" because we want to expand that variable.
     $replacementText = "`$(`$Timestamp.ToString('$timestampFormat'))"
 
-    $modifiedText = $workingFormat -ireplace '{\s*Timestamp\s*}', $replacementText
+    $modifiedText = $workingFormat -ireplace '{\s*Timestamp\s*(?::\s*.+\s*)?\s*}', $replacementText
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "Timestamp"
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*CallingObjectName\s*}', '$CallingObjectName'
+    $modifiedText = $workingFormat -ireplace '{\s*CallingObjectName\s*}', '${CallingObjectName}'
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "CallingObjectName"
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*LogLevel\s*}', '$LogLevel'
+    $modifiedText = $workingFormat -ireplace '{\s*LogLevel\s*}', '${LogLevel}'
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "LogLevel"
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*Result\s*}', '$Result'
+    $modifiedText = $workingFormat -ireplace '{\s*Result\s*}', '${Result}'
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "Result"
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*MessageType\s*}', '$MessageType'
+    $modifiedText = $workingFormat -ireplace '{\s*MessageType\s*}', '${MessageType}'
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "MessageType"
