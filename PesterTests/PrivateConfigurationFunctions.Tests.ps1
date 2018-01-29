@@ -181,4 +181,133 @@ InModuleScope Logging {
             $script:_logFileOverwritten | Should -Be $False
         }
     }
+
+    Describe "DeepCopyHashTable" {     
+
+        It 'returns $Null if source is $Null' {
+            $sourceHashTable = $Null
+            Private_DeepCopyHashTable -HashTable $sourceHashTable | Should -Be $Null       
+        }     
+
+        It 'returns empty hash table if source is empty hash table' {
+            $sourceHashTable = @{}
+            $copiedHashTable = Private_DeepCopyHashTable -HashTable $sourceHashTable 
+            $copiedHashTable | Should -BeOfType [Hashtable]
+            $copiedHashTable.Keys.Count | Should -Be 0
+        }      
+
+        It 'copies value type element which is independent of the source element' {
+            $sourceHashTable = @{ Key = 10 }
+            $copiedHashTable = Private_DeepCopyHashTable -HashTable $sourceHashTable 
+            $copiedHashTable | Should -BeOfType [Hashtable]
+            $sourceHashTable.Key = -1
+            $copiedHashTable.Key | Should -Be 10
+        }       
+
+        It 'copies string element which is independent of the source element' {
+            $elementValue = "Hello"
+            $sourceHashTable = @{ Key = $elementValue }
+            $copiedHashTable = Private_DeepCopyHashTable -HashTable $sourceHashTable 
+            $copiedHashTable | Should -BeOfType [Hashtable]
+            $sourceHashTable.Key = "Goodbye"
+            $copiedHashTable.Key | Should -Be $elementValue
+        }        
+
+        It 'copies array element which is independent of the source element' {
+            $elementValue = @(1, 2, 3)
+            $sourceHashTable = @{ Key = $elementValue }
+            $copiedHashTable = Private_DeepCopyHashTable -HashTable $sourceHashTable 
+            $sourceHashTable.Key += @(4, 5)
+            $copiedHashTable | Should -BeOfType [Hashtable]
+            $copiedHashTable.Key | Should -Be @(1, 2, 3)
+        }        
+
+        It 'copies hashtable element which is independent of the source element' {
+            $elementValue = @{ NestedKey = 10 }
+            $sourceHashTable = @{ Key = $elementValue }
+            $copiedHashTable = Private_DeepCopyHashTable -HashTable $sourceHashTable 
+            $sourceHashTable.Key["SecondKey"] = "Twenty"
+            $copiedHashTable | Should -BeOfType [Hashtable]
+            $copiedNestedHashTable = $copiedHashTable.Key
+            $copiedNestedHashTable | Should -BeOfType [Hashtable]
+            $copiedNestedHashTable.Keys.Count | Should -Be 1
+            $copiedNestedHashTable.NestedKey | Should -Be 10
+        } 
+    }
+
+    Describe "SetMessageFormat" {     
+
+        It 'sets LogConfiguration.MessageFormat equal to the specified string' {
+            $newMessageFormat = '{LogLevel}: {Message}'
+            $originalMessageFormat = $script:_logConfiguration.MessageFormat
+            Private_SetMessageFormat -MessageFormat $newMessageFormat 
+            $script:_logConfiguration.MessageFormat | Should -Be $newMessageFormat
+            $script:_logConfiguration.MessageFormat | Should -Not -Be $originalMessageFormat
+        }    
+
+        It 'sets MessageFormatInfo to be a hashtable' {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{LogLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat  
+            $script:_messageFormatInfo | Should -BeOfType [Hashtable]
+        }    
+
+        function TestMessageFormatInfoHasKey([string]$Key)
+        {
+            It "creates element '$key' in MessageFormatInfo hashtable" {
+                $script:_messageFormatInfo = $Null
+                $newMessageFormat = '{LogLevel}: {Message}'
+                Private_SetMessageFormat -MessageFormat $newMessageFormat
+                $script:_messageFormatInfo.ContainsKey($key) | Should -Be $True
+            }  
+        }
+
+        TestMessageFormatInfoHasKey RawFormat
+        TestMessageFormatInfoHasKey WorkingFormat
+        TestMessageFormatInfoHasKey FieldsPresent
+
+        It 'sets MessageFormatInfo.RawFormat equal to the specified string' {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{LogLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat  
+            $script:_messageFormatInfo.RawFormat | Should -Be $newMessageFormat
+        }
+
+        It 'sets MessageFormatInfo.WorkingFormat equal to the specified string with placeholders replaced by variable names' {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{LogLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat  
+            $script:_messageFormatInfo.WorkingFormat | Should -Be '${LogLevel}: ${Message}'
+        }
+
+        It 'sets MessageFormatInfo.FieldsPresent to be an array' {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{LogLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat  
+            $script:_messageFormatInfo.FieldsPresent.GetType().FullName | Should -Be "System.Object[]"
+        }
+
+        It 'adds placeholder names from specified string to MessageFormatInfo.FieldsPresent' {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{LogLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat  
+            $script:_messageFormatInfo.FieldsPresent.Contains("LogLevel") | Should -Be $True 
+            $script:_messageFormatInfo.FieldsPresent.Contains("Message") | Should -Be $True
+        }
+    }
+
+    Describe "SetConfigTextColor" { 
+
+        It "sets LogConfiguration.HostTextColor to DefaultHostTextColor if HostTextColor doesn't exist" {
+            $script:_logConfiguration.Remove("HostTextColor")
+            $script:_logConfiguration.ContainsKey("HostTextColor") | Should -Not -Be $True
+            Private_SetConfigTextColor -ConfigurationKey Error -ColorName Green
+            $script:_logConfiguration.HostTextColor | Should -Be $script:_defaultHostTextColor
+        }
+
+        It "sets specified LogConfiguration.HostTextColor element to specified colour" {
+            Private_SetConfigTextColor -ConfigurationKey Error -ColorName Yellow
+            $script:_logConfiguration.HostTextColor.Error | Should -Be Yellow
+        }
+    }
 }
