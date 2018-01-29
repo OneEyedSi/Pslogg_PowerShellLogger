@@ -1682,11 +1682,10 @@ does not indicate why the validation failed.
 #>
 function Private_ValidateHostColor (
 	[Parameter(Mandatory=$True)]
-	[AllowNull()]
 	[string]$ColorToTest
 	)
 {	
-	$validColors = @("Black", "DarkBlue", "DarkGreen", "DarkCyan", "DarkRed", "DarkMagenta", 
+    $validColors = @("Black", "DarkBlue", "DarkGreen", "DarkCyan", "DarkRed", "DarkMagenta", 
             "DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", "Red", "Magenta", 
             "Yellow", "White")
 	

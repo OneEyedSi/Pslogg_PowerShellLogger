@@ -18,6 +18,31 @@ Import-Module ..\Modules\Logging\Logging.psm1 -Force
 InModuleScope Logging {
 
     Describe "ValidateSwitchParameterGroup" {
+    
+        It 'throws ParameterBindingValidationException if no switches supplied' {
+            [switch[]]$switchList = @()
+            try
+            {
+                Private_ValidateSwitchParameterGroup -SwitchList $switchList -ErrorMessage "Throwing validation exception"
+            }
+            catch
+            {
+                $_.Exception.GetType().Name | Should -Be 'ParameterBindingValidationException'
+            }            
+        }
+    
+        It 'throws ParameterBindingValidationException if no error message supplied' {
+            [switch]$firstSwitch = $True
+            [switch[]]$switchList = @($firstSwitch)
+            try
+            {
+                Private_ValidateSwitchParameterGroup -SwitchList $switchList -ErrorMessage ''
+            }
+            catch
+            {
+                $_.Exception.GetType().Name | Should -Be 'ParameterBindingValidationException'
+            }            
+        }
 
         It 'does not throw if one switch defined and not set' {
             [switch]$firstSwitch = $True
