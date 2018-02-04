@@ -859,7 +859,7 @@ function Get-LogConfiguration()
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
     }
-    return $script:_logConfiguration
+    return Private_DeepCopyHashTable $script:_logConfiguration
 }
 
 <#
