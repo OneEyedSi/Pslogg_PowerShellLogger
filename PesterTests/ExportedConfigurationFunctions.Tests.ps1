@@ -10,7 +10,19 @@ Pester tests of the configuration-related functions exported from the Logging mo
 # This would confuse Pester.  So, to be sure there are not multiple Logging modules imported, 
 # remove all Logging modules and re-import only one.
 Get-Module Logging | Remove-Module -Force
-Import-Module ..\Modules\Logging\Logging.psm1 -Force
+# Use $PSScriptRoot so this script will always import the Logging module in the Modules folder 
+# adjacent to the folder containing this script, regardless of the location that Pester is 
+# invoked from:
+#                                     {parent folder}
+#                                             |
+#                   -----------------------------------------------------
+#                   |                                                   |
+#     {folder containing this script}                                Modules folder
+#                   \                                                   |
+#                    ------------------> imports                     Logging module folder
+#                                                \                      |
+#                                                 -----------------> Logging.psm1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Logging\Logging.psm1 -Resolve) -Force
 
 <#
 .SYNOPSIS
