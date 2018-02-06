@@ -838,6 +838,73 @@ InModuleScope Logging {
             }
         }
 
+        Context 'Parameter set "IndividualSettings_IndividualColors"' {
+
+            It 'sets HostTextColor Error via parameter ErrorTextColor' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+
+                Set-LogConfiguration -ErrorTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Warning via parameter WarningTextColor' {
+                $script:_logConfiguration.HostTextColor.Warning = 'Red'
+
+                Set-LogConfiguration -WarningTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Warning | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Information via parameter InformationTextColor' {
+                $script:_logConfiguration.HostTextColor.Information = 'Red'
+
+                Set-LogConfiguration -InformationTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Information | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Debug via parameter DebugTextColor' {
+                $script:_logConfiguration.HostTextColor.Debug = 'Red'
+
+                Set-LogConfiguration -DebugTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Debug | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Verbose via parameter VerboseTextColor' {
+                $script:_logConfiguration.HostTextColor.Verbose = 'Red'
+
+                Set-LogConfiguration -VerboseTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Verbose | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Success via parameter SuccessTextColor' {
+                $script:_logConfiguration.HostTextColor.Success = 'Red'
+
+                Set-LogConfiguration -SuccessTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Success | Should -Be Blue
+            }
+
+            It 'sets HostTextColor Failure via parameter FailureTextColor' {
+                $script:_logConfiguration.HostTextColor.Failure = 'Red'
+
+                Set-LogConfiguration -FailureTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.Failure | Should -Be Blue
+            }
+
+            It 'sets HostTextColor PartialFailure via parameter PartialFailureTextColor' {
+                $script:_logConfiguration.HostTextColor.PartialFailure = 'Red'
+
+                Set-LogConfiguration -PartialFailureTextColor Blue
+                    
+                $script:_logConfiguration.HostTextColor.PartialFailure | Should -Be Blue
+            }
+        }
+
         Context 'Mutually exclusive switch parameter validation' {
 
             It 'throws exception if switches IncludeDateInFileName and ExcludeDateFromFileName are both set' {
