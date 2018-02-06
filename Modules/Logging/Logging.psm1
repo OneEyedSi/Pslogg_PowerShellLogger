@@ -503,7 +503,7 @@ function Write-LogMessage (
     Private_ValidateSwitchParameterGroup -SwitchList $IsError,$IsWarning,$IsInformation,$IsDebug,$IsVerbose,$IsSuccessResult,$IsFailureResult,$IsPartialFailureResult `
 		-ErrorMessage "Only one Message Type switch parameter may be set when calling the function. Message Type switch parameters: -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose, -IsSuccessResult, -IsFailureResult, -IsPartialFailureResult"
 
-    Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams
+    Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams `
 		-ErrorMessage "Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams"
 	
     $Timestamp = Get-Date
@@ -860,18 +860,6 @@ function Get-LogConfiguration()
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
     }
     return Private_DeepCopyHashTable $script:_logConfiguration
-}
-
-<#
-.SYNOPSIS
-Resets the log configuration to the default settings. 
-
-.DESCRIPTION    
-Resets the log configuration to the default settings. 
-#>
-function Reset-LogConfiguration()
-{
-    Set-LogConfiguration -LogConfiguration $script:_defaultLogConfiguration
 }
 
 <#
@@ -1308,13 +1296,13 @@ function Set-LogConfiguration
 
     # Ensure that mutually exclusive pairs of switch parameters are not both set:
 
-    Private_ValidateSwitchParameterGroup -SwitchList $IncludeDateInFileName,$ExcludeDateFromFileName
+    Private_ValidateSwitchParameterGroup -SwitchList $IncludeDateInFileName,$ExcludeDateFromFileName `
 		-ErrorMessage "Only one FileName switch parameter may be set when calling the function. FileName switch parameters: -IncludeDateInFileName, -ExcludeDateFromFileName"
 
-    Private_ValidateSwitchParameterGroup -SwitchList $OverwriteLogFile,$AppendToLogFile
+    Private_ValidateSwitchParameterGroup -SwitchList $OverwriteLogFile,$AppendToLogFile `
 		-ErrorMessage "Only one LogFileWriteBehavior switch parameter may be set when calling the function. LogFileWriteBehavior switch parameters: -OverwriteLogFile, -AppendToLogFile"
 
-    Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams
+    Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams `
 		-ErrorMessage "Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams"
 
     if (![string]::IsNullOrWhiteSpace($LogLevel))
@@ -1409,6 +1397,18 @@ function Set-LogConfiguration
     {
         Private_SetConfigTextColor -ConfigurationKey "PartialFailure" -ColorName $PartialFailureTextColor
     }
+}
+
+<#
+.SYNOPSIS
+Resets the log configuration to the default settings. 
+
+.DESCRIPTION    
+Resets the log configuration to the default settings. 
+#>
+function Reset-LogConfiguration()
+{
+    Set-LogConfiguration -LogConfiguration $script:_defaultLogConfiguration
 }
 
 <#
@@ -1620,7 +1620,7 @@ This function is NOT intended to be exported from this module.
 #>
 function Private_SetConfigTextColor([string]$ConfigurationKey, [string]$ColorName)
 {
-    if (!$script:_logConfiguration.ContainsKey("HostTextColor"))
+    if (-not $script:_logConfiguration.ContainsKey("HostTextColor"))
     {
         $script:_logConfiguration.HostTextColor = $script:_defaultHostTextColor
     }
