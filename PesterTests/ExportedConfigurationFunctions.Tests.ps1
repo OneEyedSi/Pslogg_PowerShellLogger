@@ -905,6 +905,38 @@ InModuleScope Logging {
             }
         }
 
+        Context 'Multiple parameters set simultaneously' {
+            It 'sets multiple configuration properties if multiple parameters are set' {
+                $script:_logFileOverwritten = $True
+
+                Set-LogConfiguration -LogLevel Verbose -LogFileName 'C:\Test\Test.txt' `
+                    -ExcludeDateFromFileName -AppendToLogFile -WriteToStreams `
+                    -MessageFormat '{LogLevel} | {Message}' -ErrorTextColor DarkYellow `
+                    -WarningTextColor DarkYellow -InformationTextColor DarkYellow `
+                    -DebugTextColor DarkYellow -VerboseTextColor DarkYellow `
+                    -SuccessTextColor DarkYellow -FailureTextColor DarkYellow `
+                    -PartialFailureTextColor DarkYellow
+
+                $referenceLogConfiguration = GetNewConfiguration
+                $referenceMessageFormatInfo = GetNewMessageFormatInfo
+                $newLogFilePath = GetNewLogFilePath
+                $newLogFileOverwritten = $False
+
+                $differences = GetHashTableDifferences `
+                    -HashTable1 $script:_logConfiguration `
+                    -HashTable2 $referenceLogConfiguration
+                $differences | Should -Be @()
+                
+                $differences = GetHashTableDifferences `
+                    -HashTable1 $script:_messageFormatInfo `
+                    -HashTable2 $referenceMessageFormatInfo
+                $differences | Should -Be @()
+
+                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logFileOverwritten | Should -Be $False
+            }
+        }
+
         Context 'Mutually exclusive switch parameter validation' {
 
             It 'throws exception if switches IncludeDateInFileName and ExcludeDateFromFileName are both set' {
