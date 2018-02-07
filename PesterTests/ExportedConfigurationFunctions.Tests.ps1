@@ -272,6 +272,47 @@ InModuleScope Logging {
         $_logFileOverwritten = $False
     }
 
+    # Verifies the specified hashtable is identical to the reference hashtable.
+    function AssertHashTablesMatch 
+        (
+            [hashtable]$ReferenceHashTable, 
+            [hashtable]$HashTableToTest, 
+            [switch]$ShouldBeNotEqual
+        ) 
+    {
+        $differences = GetHashTableDifferences `
+            -HashTable1 $ReferenceHashTable `
+            -HashTable2 $HashTableToTest
+        if ($ShouldBeNotEqual)
+        {
+            $differences | Should -Not -Be @()
+        }
+        else
+        {
+            $differences | Should -Be @()
+        }
+    }
+
+    function AssertLogConfigurationMatchesReference 
+        (
+            [hashtable]$ReferenceHashTable, 
+            [switch]$ShouldBeNotEqual
+        ) 
+    {
+        AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
+            -HashTableToTest $script:_logConfiguration -ShouldBeNotEqual:$ShouldBeNotEqual
+    }
+
+    function AssertMessageFormatInfoMatchesReference 
+        (
+            [hashtable]$ReferenceHashTable, 
+            [switch]$ShouldBeNotEqual
+        ) 
+    {
+        AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
+            -HashTableToTest $script:_messageFormatInfo -ShouldBeNotEqual:$ShouldBeNotEqual
+    }
+
     Describe 'Get-LogConfiguration' {     
         BeforeEach {
             SetConfigurationToDefault
@@ -279,26 +320,29 @@ InModuleScope Logging {
 
         It 'returns a copy of default configuration if current configuration is $Null' {
             $script:_logConfiguration = $Null
+
             $logConfiguration = Get-LogConfiguration
-            $differences = GetHashTableDifferences `
-                -HashTable1 $logConfiguration -HashTable2 $script:_defaultLogConfiguration
-            $differences | Should -Be @()        
+            
+            AssertHashTablesMatch -ReferenceHashTable $script:_defaultLogConfiguration `
+                -HashTableToTest $logConfiguration
         } 
 
         It 'returns a copy of default configuration if current configuration is empty hashtable' {
             $script:_logConfiguration = @{}
+
             $logConfiguration = Get-LogConfiguration
-            $differences = GetHashTableDifferences `
-                -HashTable1 $logConfiguration -HashTable2 $script:_defaultLogConfiguration
-            $differences | Should -Be @()        
+
+            AssertHashTablesMatch -ReferenceHashTable $script:_defaultLogConfiguration `
+                -HashTableToTest $logConfiguration
         } 
 
         It 'returns a copy of current configuration if current configuration hashtable is populated' {
             $script:_logConfiguration.Keys.Count | Should -BeGreaterThan 6
+
             $logConfiguration = Get-LogConfiguration
-            $differences = GetHashTableDifferences `
-                -HashTable1 $logConfiguration -HashTable2 $script:_logConfiguration
-            $differences | Should -Be @()        
+            
+            AssertHashTablesMatch -ReferenceHashTable $script:_logConfiguration `
+                -HashTableToTest $logConfiguration
         }  
 
         It 'returns a static copy of current configuration, which does not reflect subsequent changes to configuration' {
@@ -325,33 +369,16 @@ InModuleScope Logging {
     }
 
     Describe 'Set-LogConfiguration' {     
-        function TestMessageFormatInfo ([hashtable]$ReferenceHashTable, [switch]$ShouldBeNotEqual) {
-            $differences = GetHashTableDifferences `
-                -HashTable1 $script:_logConfiguration `
-                -HashTable2 $script:_defaultLogConfiguration
-            if ($ShouldBeNotEqual)
-            {
-                $differences | Should -Not -Be @()
-            }
-            else
-            {
-                $differences | Should -Be @()
-            }
-        }
 
         BeforeEach {
             SetConfigurationToDefault
 
-            $differences = GetHashTableDifferences `
-                -HashTable1 $script:_logConfiguration `
-                -HashTable2 $script:_defaultLogConfiguration
-            $differences | Should -Be @()
+            AssertLogConfigurationMatchesReference `
+                -ReferenceHashTable $script:_defaultLogConfiguration
 
             $defaultMessageFormatInfo = GetDefaultMessageFormatInfo
-            $differences = GetHashTableDifferences `
-                -HashTable1 $script:_messageFormatInfo `
-                -HashTable2 $defaultMessageFormatInfo
-            $differences | Should -Be @()
+
+            AssertMessageFormatInfoMatchesReference -ReferenceHashTable $defaultMessageFormatInfo
         }
 
         Context 'Parameter set "AllSettings"' {
@@ -360,10 +387,7 @@ InModuleScope Logging {
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
-                $differences = GetHashTableDifferences `
-                    -HashTable1 $script:_logConfiguration `
-                    -HashTable2 $newConfiguration
-                $differences | Should -Be @()
+                AssertLogConfigurationMatchesReference -ReferenceHashTable $newConfiguration
             }
 
             It 'updates MessageFormatInfo from the MessageFormat details' {                
@@ -372,10 +396,7 @@ InModuleScope Logging {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newMessageFormatInfo = GetNewMessageFormatInfo
-                $differences = GetHashTableDifferences `
-                    -HashTable1 $script:_messageFormatInfo `
-                    -HashTable2 $newMessageFormatInfo
-                $differences | Should -Be @()
+                AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
             }
 
             It 'updates LogFilePath' {
@@ -813,10 +834,7 @@ InModuleScope Logging {
                 Set-LogConfiguration -MessageFormat $newFormat
 
                 $newMessageFormatInfo = GetNewMessageFormatInfo
-                $differences = GetHashTableDifferences `
-                    -HashTable1 $script:_messageFormatInfo `
-                    -HashTable2 $newMessageFormatInfo
-                $differences | Should -Be @()
+                AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
             }
         }
 
@@ -835,6 +853,8 @@ InModuleScope Logging {
                     -HashTable1 $script:_logConfiguration.HostTextColor `
                     -HashTable2 $newHostTextColours
                 $differences | Should -Be @()
+
+
             }
         }
 
@@ -922,15 +942,11 @@ InModuleScope Logging {
                 $newLogFilePath = GetNewLogFilePath
                 $newLogFileOverwritten = $False
 
-                $differences = GetHashTableDifferences `
-                    -HashTable1 $script:_logConfiguration `
-                    -HashTable2 $referenceLogConfiguration
-                $differences | Should -Be @()
+                AssertLogConfigurationMatchesReference `
+                    -ReferenceHashTable $referenceLogConfiguration
                 
-                $differences = GetHashTableDifferences `
-                    -HashTable1 $script:_messageFormatInfo `
-                    -HashTable2 $referenceMessageFormatInfo
-                $differences | Should -Be @()
+                AssertMessageFormatInfoMatchesReference `
+                    -ReferenceHashTable $referenceMessageFormatInfo
 
                 $script:_logFilePath | Should -Be $newLogFilePath
                 $script:_logFileOverwritten | Should -Be $False
