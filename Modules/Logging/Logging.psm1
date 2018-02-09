@@ -1724,7 +1724,7 @@ function Private_GetTimestampFormat ([string]$MessageFormat)
     # Note the first colon in the regex pattern is part of the non-capturing group specifier.  
     # The second colon in the regex pattern represents the separator between the placholder name 
     # and the datetime format string, eg {Timestamp:d}
-    $regexPattern = "{\s*Timestamp\s*(?::\s*(.+)\s*)?\s*}"
+    $regexPattern = "{\s*Timestamp\s*(?::\s*(.+?)\s*)?\s*}"
 	
     # -imatch is a case insensitive regex match.
     # No need to compile the regex as it won't be used often.
@@ -1830,7 +1830,7 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
     # not escape the "$" in "$timestampFormat" because we want to expand that variable.
     $replacementText = "`$(`$Timestamp.ToString('$timestampFormat'))"
 
-    $modifiedText = $workingFormat -ireplace '{\s*Timestamp\s*(?::\s*.+\s*)?\s*}', $replacementText
+    $modifiedText = $workingFormat -ireplace '{\s*Timestamp\s*(?::\s*.+?\s*)?\s*}', $replacementText
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "Timestamp"

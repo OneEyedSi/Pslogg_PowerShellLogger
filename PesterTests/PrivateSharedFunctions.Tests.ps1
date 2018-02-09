@@ -277,7 +277,8 @@ InModuleScope Logging {
 
         function TestWorkingFormatFieldSurroundedBySpaces ([string]$FieldName)
         {
-            $formatTemplate = 'xxx [FIELD PLACEHOLDER] xxx'
+            $formatTemplate = 'xxx [FIELD PLACEHOLDER] xxx' 
+            TestWorkingFormatField -FieldName $FieldName -FormatTemplate $formatTemplate
         }
 
         function TestWorkingFormatField ([string]$FieldName, [string]$FormatTemplate)
@@ -286,8 +287,26 @@ InModuleScope Logging {
             $workingFormatTemplate = $FormatTemplate -replace "\[FIELD PLACEHOLDER\]", '`${$${FieldName}}'
             $messageFormat = $ExecutionContext.InvokeCommand.ExpandString($messageFormatTemplate)
             $workingFormat = $ExecutionContext.InvokeCommand.ExpandString($workingFormatTemplate)
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -Be $workingFormat
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
+        }
+
+        function TestWorkingFormat 
+            (
+                [string]$InputMessageFormat, 
+                [string]$ExpectedWorkingFormat, 
+                [switch]$DoRegexMatch
+            )
+        {
+            $hashTable = Private_GetMessageFormatInfo -MessageFormat $InputMessageFormat
+            if ($DoRegexMatch)
+            {
+                $hashTable.WorkingFormat | Should -Match $ExpectedWorkingFormat
+            }
+            else
+            {
+                $hashTable.WorkingFormat | Should -Be $ExpectedWorkingFormat
+            }
         }
 
         It 'replaces {Message} placeholder with "${Message}" in WorkingFormat' {
@@ -311,25 +330,31 @@ InModuleScope Logging {
         }
 
         It 'replaces {TimeStamp} placeholder with "`$(`$Timestamp.ToString(<timestamp format>))" in WorkingFormat' {
-            $messageFormat = 'xxx {Timestamp} xxx'
             # Double the single quotes to escape them.
-            $workingFormat = 'xxx \$\(\$Timestamp\.ToString\(''.*''\)\) xxx'
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -Match $workingFormat
+            TestWorkingFormat -InputMessageFormat 'xxx {Timestamp} xxx' `
+                -ExpectedWorkingFormat 'xxx \$\(\$Timestamp\.ToString\(''.*''\)\) xxx' `
+                -DoRegexMatch
         }
 
         It 'uses default <timestamp format> in WorkingFormat if none specified' {
             $messageFormat = 'xxx {Timestamp} xxx'
-            $workingFormat = 'xxx \$\(\$Timestamp\.ToString\(''yyyy-MM-dd hh:mm:ss.fff''\)\) xxx'
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -Match $workingFormat
+            $workingFormat = 'xxx $($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) xxx'
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
         }
 
         It 'includes specified <timestamp format> in WorkingFormat if supplied' {
             $messageFormat = 'xxx {Timestamp : d} xxx'
-            $workingFormat = 'xxx \$\(\$Timestamp\.ToString\(''d''\)\) xxx'
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -Match $workingFormat
+            $workingFormat = 'xxx $($Timestamp.ToString(''d'')) xxx'
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
+        }
+
+        It 'replaces all other placeholders that follow a {TimeStamp} placeholder correctly' {
+            $messageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}'
+            $workingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallingObjectName} | ${MessageType} | ${Message}'
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
         }
 
         It 'generates correct WorkingFormat if placeholder embedded in text without surrounding spaces' {
@@ -339,9 +364,9 @@ InModuleScope Logging {
 
         It 'generates correct Timestamp field in WorkingFormat if placeholder embedded in text without surrounding spaces' {
             $messageFormat = 'xxx{Timestamp : d}xxx'
-            $workingFormat = 'xxx\$\(\$Timestamp\.ToString\(''d''\)\)xxx'
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -Match $workingFormat
+            $workingFormat = 'xxx$($Timestamp.ToString(''d''))xxx'
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
         }
 
         It 'leaves leading and trailing spaces in WorkingFormat' {
@@ -352,8 +377,8 @@ InModuleScope Logging {
         It 'replaces multiple placeholders in WorkingFormat' {
             $messageFormat = 'xxx {LogLevel} {CallingObjectName} {Message} xxx'
             $workingFormat = 'xxx ${LogLevel} ${CallingObjectName} ${Message} xxx'
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-            $hashTable.WorkingFormat | Should -BeExactly $workingFormat
+            TestWorkingFormat -InputMessageFormat $messageFormat `
+                -ExpectedWorkingFormat $workingFormat
         }
 
         It 'FieldsPresent is empty if no placeholders are present in message format text' {
