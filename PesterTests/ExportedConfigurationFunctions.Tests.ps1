@@ -1061,6 +1061,7 @@ InModuleScope Logging {
 
         It 'does not clear LogFileOverwritten if configuration LogFileName unchanged' {
             $script:_logConfiguration.LogFileName = $script:_defaultLogConfiguration.LogFileName
+            $script:_logFilePath = GetDefaultLogFilePath
             $script:_logFileOverwritten = $True
 
             Reset-LogConfiguration
