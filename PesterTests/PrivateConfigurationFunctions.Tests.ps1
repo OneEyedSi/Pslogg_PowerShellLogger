@@ -48,10 +48,25 @@ InModuleScope Logging {
 
         It 'relative path is rooted on directory of caller' {
             $originalPath = 'SubDirectory\test.log'
-            $pathOfFolderContainingThisScript = Convert-Path -Path .
-            $expectedPath = Join-Path $pathOfFolderContainingThisScript $originalPath
+            $callStack = Get-PSCallStack
+            $stackFrame = $callStack[0]
+            # Skip this function in the call stack as we've already read it.
+	        $i = 1
+	        while ($stackFrame.ScriptName -ne $Null -and $i -lt $callStack.Count)
+	        {
+		        $stackFrame = $callStack[$i]
+                if ($stackFrame.ScriptName -ne $Null)
+		        {
+                    $stackFrameFileName = $stackFrame.ScriptName
+                }
+		        $i++
+	        }
+            $pathOfCallerDirectory = Split-Path -Path $stackFrameFileName -Parent
+            $expectedPath = Join-Path $pathOfCallerDirectory $originalPath
+
             $absolutePath = Private_GetAbsolutePath -Path $originalPath 
-            Private_GetAbsolutePath -Path $originalPath | Should -Be $expectedPath
+
+            $absolutePath | Should -Be $expectedPath
         } 
     }
 

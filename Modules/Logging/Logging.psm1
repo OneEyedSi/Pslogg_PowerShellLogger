@@ -688,6 +688,9 @@ function Private_GetCallingFunctionName()
 	$thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
 	$stackFrameFileName = $thisModuleFileName
+    # Skip this function in the call stack as we've already read it.  We also know there must 
+    # be at least two stack frames in the call stack as this function will only be called from 
+    # another function in this module, so it's safe to skip the first stack frame.
 	$i = 1
 	$stackFrameFunctionName = "----"
 	while ($stackFrameFileName -eq $thisModuleFileName -and $i -lt $callStack.Count)
@@ -1413,6 +1416,56 @@ function Reset-LogConfiguration()
 
 <#
 .SYNOPSIS
+Gets the folder name of the top-most script or function calling into this module.
+
+.DESCRIPTION
+Returns the folder name from the first non-console stack frame at the top of the call stack.  If 
+that stack frame represents this module the function will return the current location set in the 
+console.
+
+If the call stack cannot be read then the function returns $Null.
+
+
+.NOTES
+This function is NOT intended to be exported from this module.
+
+This is an expensive function.  However, it will only be called while setting the logging 
+configuration which shouldn't happen often.
+#>
+function Private_GetCallerDirectory()
+{
+	$callStack = Get-PSCallStack
+	if ($callStack -eq $null -or $callStack.Count -eq 0)
+	{
+		return $Null
+	}
+    
+    $thisFunctionStackFrame = $callStack[0]
+	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
+    
+    $i = $callStack.Count - 1
+	$stackFrameFileName = $Null
+	do
+	{
+		$stackFrame = $callStack[$i]
+		$stackFrameFileName = $stackFrame.ScriptName
+        $i--
+	} while ($stackFrameFileName -eq $Null -and $stackFrameFileName -ne $thisModuleFileName -and $i -ge 0)
+	
+    $stackFrameDirectory = (Get-Location).Path
+    # A stack frame representing a call from the console will have ScriptName equal to $Null.  A  
+    # stack frame representing a call from a script file (whether from the root of the file or 
+    # from a function) will have a non-null ScriptName.
+    if ($stackFrameFileName -ne $Null -and $stackFrameFileName -ne $thisModuleFileName)
+    {
+        $stackFrameDirectory = Split-Path -Path $stackFrameFileName -Parent
+    }
+
+	return $stackFrameDirectory
+}
+
+<#
+.SYNOPSIS
 Gets the absolute path of the specified path.
 
 .DESCRIPTION
@@ -1435,7 +1488,7 @@ function Private_GetAbsolutePath (
         return $Path
     }
 
-    $callingDirectoryPath = $MyInvocation.PSScriptRoot
+    $callingDirectoryPath = Private_GetCallerDirectory
 
     $Path = Join-Path $callingDirectoryPath $Path
 

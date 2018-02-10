@@ -236,7 +236,7 @@ InModuleScope Logging {
     {
         $messageFormatInfo = @{
                                 RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}'
-                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | $CallingObjectName | $MessageType | $Message'
+                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallingObjectName} | ${MessageType} | ${Message}'
                                 FieldsPresent = @('Message', 'Timestamp', 'CallingObjectName', 'MessageType')
                             }
         return $messageFormatInfo
@@ -254,11 +254,33 @@ InModuleScope Logging {
         return 'C:\Test\Test.txt'
     }
 
+    function GetCallingDirectoryPath ()
+    {
+        $callStack = Get-PSCallStack
+        $stackFrame = $callStack[0]
+        # Skip this function in the call stack as we've already read it.
+	    $i = 1
+	    while ($stackFrame.ScriptName -ne $Null -and $i -lt $callStack.Count)
+	    {
+		    $stackFrame = $callStack[$i]
+            if ($stackFrame.ScriptName -ne $Null)
+		    {
+                $stackFrameFileName = $stackFrame.ScriptName
+            }
+		    $i++
+	    }
+        $pathOfCallerDirectory = Split-Path -Path $stackFrameFileName -Parent
+        return $pathOfCallerDirectory
+    }
+
     function GetDefaultLogFilePath ()
     {
         $dateString = Get-Date -Format "_yyyyMMdd"
         $fileName = "Script${dateString}.log"
-        $callingDirectoryPath = $MyInvocation.PSScriptRoot
+        # Can't use $PSScriptRoot because it will return the folder containing this file, while 
+        # the Logging module will see the ultimate caller as the Pester module running this 
+        # test script.
+        $callingDirectoryPath = GetCallingDirectoryPath
         $path = Join-Path $callingDirectoryPath $fileName
         return $path
     }
@@ -269,7 +291,16 @@ InModuleScope Logging {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
         $script:_messageFormatInfo = GetDefaultMessageFormatInfo
         $script:_logFilePath = GetDefaultLogFilePath
-        $_logFileOverwritten = $False
+        $script:_logFileOverwritten = $False
+    }
+
+    # Sets the Logging configuration so that every settings differs from the defaults.
+    function SetNewConfiguration ()
+    {
+        $script:_logConfiguration = GetNewConfiguration
+        $script:_messageFormatInfo = GetNewMessageFormatInfo
+        $script:_logFilePath = GetNewLogFilePath
+        $script:_logFileOverwritten = $True
     }
 
     # Verifies the specified hashtable is identical to the reference hashtable.
@@ -377,7 +408,6 @@ InModuleScope Logging {
                 -ReferenceHashTable $script:_defaultLogConfiguration
 
             $defaultMessageFormatInfo = GetDefaultMessageFormatInfo
-
             AssertMessageFormatInfoMatchesReference -ReferenceHashTable $defaultMessageFormatInfo
         }
 
@@ -975,6 +1005,67 @@ InModuleScope Logging {
                 { Set-LogConfiguration -WriteToHost -WriteToStreams } | 
                     Should -Throw 'Only one Destination switch parameter may be set'
             }
+        }
+    }
+
+    Describe 'Reset-LogConfiguration' {             
+
+        BeforeEach {
+            SetNewConfiguration
+
+            $newConfiguration = GetNewConfiguration
+            AssertLogConfigurationMatchesReference `
+                -ReferenceHashTable $newConfiguration
+
+            $newMessageFormatInfo = GetNewMessageFormatInfo
+            AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
+
+            $newLogFilePath = GetNewLogFilePath
+            $script:_logFilePath | Should -Be $newLogFilePath
+
+            $script:_logFileOverwritten | Should -Be $True
+        }
+
+        It 'resets configuration to default hashtable' {
+                
+            Reset-LogConfiguration 
+
+            AssertLogConfigurationMatchesReference `
+                -ReferenceHashTable $script:_defaultLogConfiguration
+        }
+
+        It 'resets MessageFormatInfo to default values' {                
+
+            Reset-LogConfiguration 
+
+            $defaultMessageFormatInfo = GetDefaultMessageFormatInfo
+            AssertMessageFormatInfoMatchesReference -ReferenceHashTable $defaultMessageFormatInfo
+        }
+
+        It 'resets LogFilePath to default value' {
+
+            Reset-LogConfiguration
+
+            $defaultLogFilePath = GetDefaultLogFilePath
+            $script:_logFilePath | Should -Be $defaultLogFilePath
+        }
+
+        It 'clears LogFileOverwritten if configuration LogFileName changed' {
+            $script:_logConfiguration.LogFileName = GetNewLogFilePath
+            $script:_logFileOverwritten = $True
+
+            Reset-LogConfiguration
+
+            $script:_logFileOverwritten | Should -Be $False
+        }
+
+        It 'does not clear LogFileOverwritten if configuration LogFileName unchanged' {
+            $script:_logConfiguration.LogFileName = $script:_defaultLogConfiguration.LogFileName
+            $script:_logFileOverwritten = $True
+
+            Reset-LogConfiguration
+
+            $script:_logFileOverwritten | Should -Be $True
         }
     }
 }
