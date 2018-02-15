@@ -276,7 +276,7 @@ InModuleScope Logging {
     function GetDefaultLogFilePath ()
     {
         $dateString = Get-Date -Format "_yyyyMMdd"
-        $fileName = "Script${dateString}.log"
+        $fileName = "Results${dateString}.log"
         # Can't use $PSScriptRoot because it will return the folder containing this file, while 
         # the Logging module will see the ultimate caller as the Pester module running this 
         # test script.

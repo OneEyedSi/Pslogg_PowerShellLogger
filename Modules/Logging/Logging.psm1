@@ -85,7 +85,7 @@ $_defaultHostTextColor = @{
 
 $_defaultLogConfiguration = @{   
                                 LogLevel = "Debug"
-                                LogFileName = "Script.log"
+                                LogFileName = "Results.log"
                                 IncludeDateInFileName = $True
                                 OverwriteLogFile = $True
                                 WriteToHost = $True
@@ -746,7 +746,7 @@ A hash table with the following keys:
     LogFileName: The path to the log file.  If LogFileName is $Null, empty or blank log messages 
         will be displayed on screen but not written to a log file.  If LogFileName is specified 
         without a path, or with a relative path, it will be relative to the directory of the 
-        calling script, not this module.  The default value for LogFileName is "Script.log";
+        calling script, not this module.  The default value for LogFileName is "Results.log";
 
     IncludeDateInFileName: If $True then the log file name will have a date, of the form 
         "_yyyyMMdd" appended to the end of the file name.  For example, "Script_20171129.log".  
@@ -893,7 +893,7 @@ A hash table representing all configuration settings.  It must have the followin
     LogFileName: The path to the log file.  If LogFileName is $Null, empty or blank log messages 
         will be displayed on screen but not written to a log file.  If LogFileName is specified 
         without a path, or with a relative path, it will be relative to the directory of the 
-        calling script, not this module.  The default value for LogFileName is "Script.log";
+        calling script, not this module.  The default value for LogFileName is "Results.log";
 
     IncludeDateInFileName: If $True then the log file name will have a date, of the form 
         "_yyyyMMdd" appended to the end of the file name.  For example, "Script_20171129.log".  
@@ -1030,7 +1030,7 @@ IncludeDateInFileName and ExcludeDateFromFileName cannot both be set at the same
 
 .PARAMETER ExcludeDateFromFileName
 A switch parameter that is the opposite of IncludeDateInFileName.  If set it will exclude the date 
-from the log file name.  For example, "Script.log".  
+from the log file name.  For example, "Results.log".  
 
 IncludeDateInFileName and ExcludeDateFromFileName cannot both be set at the same time.
 
