@@ -459,7 +459,7 @@ WriteToHost and WriteToStreams cannot both be set at the same time.
 
 #>
 function Write-LogMessage (
-    [Parameter(Mandatory=$True)]
+    [Parameter(Mandatory=$False)]
     [AllowEmptyString()]
     [string]$Message,
 
@@ -598,7 +598,27 @@ function Write-LogMessage (
 
     $textToLog = $ExecutionContext.InvokeCommand.ExpandString($messageFormatInfo.WorkingFormat)
 
+    # Long-winded logic because we want either of the local parameters to override the 
+    # configuration setting: If either of the parameters is set ignore the configuration.
+    $LogTarget = ''
     if ($WriteToHost.IsPresent)
+    {
+        $LogTarget = 'Host'
+    }
+    elseif ($WriteToStreams.IsPresent)
+    {
+        $LogTarget = 'Streams'
+    }
+    elseif ($script:_logConfiguration.WriteToHost)
+    {
+        $LogTarget = 'Host'
+    }
+    else
+    {
+        $LogTarget = 'Streams'
+    }
+
+    if ($LogTarget -eq 'Host')
     {
         if ($TextColor)
         {
@@ -609,7 +629,7 @@ function Write-LogMessage (
             Write-Host $textToLog
         }
     }
-    elseif ($WriteToStreams.IsPresent)
+    elseif ($LogTarget -eq 'Streams')
     {
         switch ($MessageType)
         {
