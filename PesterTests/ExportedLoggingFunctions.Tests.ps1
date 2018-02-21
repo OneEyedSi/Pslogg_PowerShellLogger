@@ -138,6 +138,12 @@ InModuleScope Logging {
         Assert-MockCalled -CommandName Write-Verbose -Scope It -Times $timesWriteVerboseCalled             
     }
 
+    function AssertWriteHostCalled ([string]$WithTextColor)
+    {
+        Assert-MockCalled -CommandName Write-Host `
+            -ParameterFilter { $ForegroundColor -eq $WithTextColor } -Scope It -Times 1
+    }
+
     Describe 'Write-LogMessage' {             
 
         BeforeEach {
@@ -154,6 +160,22 @@ InModuleScope Logging {
             Write-LogMessage
 
             Assert-MockCalled -CommandName Write-Host -Scope It -Times 1
+        }
+
+        It 'throws exception if an invalid -HostTextColor is specified' {
+            { Write-LogMessage -Message 'hello world' -HostTextColor DeepPurple } | 
+                Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException `
+                    -WithMessage "'DeepPurple' is not a valid text color"                                       
+        }
+
+        It 'does not throw exception if no -HostTextColor is specified' {
+            { Write-LogMessage -Message 'hello world' } | 
+                Assert-ExceptionThrown -Not
+        }
+
+        It 'does not throw exception if valid -HostTextColor is specified' {
+            { Write-LogMessage -Message 'hello world' -HostTextColor Red } | 
+                Assert-ExceptionThrown -Not
         }
 
         It 'throws exception if both -IsError and -IsWarning switches set' {
@@ -354,6 +376,86 @@ InModuleScope Logging {
             MockDestination
             Write-LogMessage -Message 'hello world'
             AssertCorrectWriteCommandCalled -WriteToStreams -MessageType 'INFORMATION'
+        }
+
+        It 'writes to host in colour specified via -HostTextColor' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Information = 'White'
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -HostTextColor $textColour
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Error text colour if -WriteToHost and -IsError switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Error = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsError 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Warning text colour if -WriteToHost and -IsWarning switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Warning = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsWarning 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Debug text colour if -WriteToHost and -IsDebug switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Debug = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsDebug 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Information text colour if -WriteToHost and -IsInformation switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Information = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsInformation 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Verbose text colour if -WriteToHost and -IsVerbose switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Verbose = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsVerbose 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Success text colour if -WriteToHost and -IsSuccessResult switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Success = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsSuccessResult 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in Failure text colour if -WriteToHost and -IsFailureResult switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Failure = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsFailureResult 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'writes to host in PartialFailure text colour if -WriteToHost and -IsPartialFailureResult switches set, and -HostTextColor not specified' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.PartialFailure = $textColour
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsPartialFailureResult 
+            AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It '-HostTextColor overrides the colour determined by a Message Type switch' {
+            $textColour = 'DarkRed'
+            $script:_logConfiguration.HostTextColor.Error = 'DarkMagenta'
+            Mock Write-Host
+            Write-LogMessage -Message 'hello world' -WriteToHost -IsError -HostTextColor $textColour
+            AssertWriteHostCalled -WithTextColor $textColour
         }
     }
 }

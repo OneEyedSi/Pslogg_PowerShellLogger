@@ -464,6 +464,7 @@ function Write-LogMessage (
     [string]$Message,
 
     [Parameter(Mandatory=$False)]
+    [ValidateScript({Private_ValidateHostColor $_})]
     [string]$HostTextColor,      
 
     [Parameter(Mandatory=$False)]
