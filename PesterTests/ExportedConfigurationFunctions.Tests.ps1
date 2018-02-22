@@ -21,8 +21,8 @@ Get-Module Prog | Remove-Module -Force
 #                   \                                                   |
 #                    ------------------> imports                     Prog module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psm1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psm1 -Resolve) -Force
+#                                                 -----------------> Prog.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
 
 InModuleScope Prog {
 

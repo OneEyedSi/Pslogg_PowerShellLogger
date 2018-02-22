@@ -22,8 +22,8 @@ Get-Module Prog | Remove-Module -Force
 #                   \                                                   |
 #                    ------------------> imports                     Prog module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psm1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psm1 -Resolve) -Force
+#                                                 -----------------> Prog.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
 
 InModuleScope Prog {
 
@@ -49,7 +49,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psm1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
                 $callStack += $stackFrame
                 return $callStack
             }
@@ -63,7 +63,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psm1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName=$Null }
                 $callStack += $stackFrame
@@ -79,7 +79,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psm1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -95,7 +95,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psm1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -111,7 +111,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psm1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='TestFunction' }
                 $callStack += $stackFrame
