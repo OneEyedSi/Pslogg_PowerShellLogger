@@ -101,8 +101,6 @@ $_messageFormatInfo = @{}
 $_logFilePath = ""
 $_logFileOverwritten = $False
 
-Reset-LogConfiguration
-
 # Function naming conventions:
 # ----------------------------
 # Functions to be exported: Follow the standard PowerShell naming convention of 
@@ -1945,6 +1943,9 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
 }
 
 #endregion
+
+# Set up initial conditions.
+Reset-LogConfiguration
 
 # Only export public functions.  To simplify the exporting of public functions but not private 
 # ones public functions must follow the standard PowerShell naming convention, 

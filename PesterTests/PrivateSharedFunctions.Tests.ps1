@@ -1,17 +1,17 @@
 ﻿<#
 .SYNOPSIS
-Tests of the shared private functions in the Logging module.
+Tests of the shared private functions in the Prog module.
 
 .DESCRIPTION
-Pester tests of the private functions in the Logging module that are called by both the 
+Pester tests of the private functions in the Prog module that are called by both the 
 configuration and the logging functions.
 #>
 
 # PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Logging modules imported, 
-# remove all Logging modules and re-import only one.
-Get-Module Logging | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Logging module in the Modules folder 
+# This would confuse Pester.  So, to be sure there are not multiple Prog modules imported, 
+# remove all Prog modules and re-import only one.
+Get-Module Prog | Remove-Module -Force
+# Use $PSScriptRoot so this script will always import the Prog module in the Modules folder 
 # adjacent to the folder containing this script, regardless of the location that Pester is 
 # invoked from:
 #                                     {parent folder}
@@ -20,12 +20,12 @@ Get-Module Logging | Remove-Module -Force
 #                   |                                                   |
 #     {folder containing this script}                                Modules folder
 #                   \                                                   |
-#                    ------------------> imports                     Logging module folder
+#                    ------------------> imports                     Prog module folder
 #                                                \                      |
-#                                                 -----------------> Logging.psm1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Logging\Logging.psm1 -Resolve) -Force
+#                                                 -----------------> Prog.psm1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psm1 -Resolve) -Force
 
-InModuleScope Logging {
+InModuleScope Prog {
 
     Describe "ValidateSwitchParameterGroup" {
     
