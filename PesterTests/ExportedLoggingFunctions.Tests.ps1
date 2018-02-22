@@ -144,6 +144,27 @@ InModuleScope Prog {
             -ParameterFilter { $ForegroundColor -eq $WithTextColor } -Scope It -Times 1
     }
 
+    function MockFileWriter ()
+    {
+        Mock Set-Content
+        Mock Add-Content
+    }
+
+    function AssertFileWriterCalled ([string]$WriterAction)
+    {
+        $timesAppenderCalled = 0
+        $timesOverwriterCalled = 0
+
+        switch ($WriterAction)
+        {
+            'APPEND'        { $timesAppenderCalled = 1 }   
+            'OVERWRITE'     { $timesOverwriterCalled = 1 }                         
+        }
+
+        Assert-MockCalled -CommandName Set-Content -Scope It -Times $timesAppenderCalled
+        Assert-MockCalled -CommandName Add-Content -Scope It -Times $timesOverwriterCalled
+    }
+
     Describe 'Write-LogMessage' {             
 
         BeforeEach {
@@ -354,27 +375,35 @@ InModuleScope Prog {
 
         It 'writes to host if -WriteToHost switch set' {
             MockDestination
+
             Write-LogMessage -Message 'hello world' -WriteToHost
+
             AssertCorrectWriteCommandCalled -WriteToHost                          
         }
 
         It 'writes to stream if -WriteToStreams switch set' {
             MockDestination
+
             Write-LogMessage -Message 'hello world' -WriteToStreams
+
             AssertCorrectWriteCommandCalled -WriteToStreams -MessageType 'INFORMATION'                          
         }
 
         It 'writes to host if neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost set' {
             $script:_logConfiguration.WriteToHost = $True
             MockDestination
+
             Write-LogMessage -Message 'hello world'
+
             AssertCorrectWriteCommandCalled -WriteToHost
         }
 
         It 'writes to stream if neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost cleared' {
             $script:_logConfiguration.WriteToHost = $False
             MockDestination
+
             Write-LogMessage -Message 'hello world'
+
             AssertCorrectWriteCommandCalled -WriteToStreams -MessageType 'INFORMATION'
         }
 
@@ -382,7 +411,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Information = 'White'
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -HostTextColor $textColour
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -390,7 +421,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Error = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsError 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -398,7 +431,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Warning = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsWarning 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -406,7 +441,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Debug = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsDebug 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -414,7 +451,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Information = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsInformation 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -422,7 +461,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Verbose = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsVerbose 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -430,7 +471,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Success = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsSuccessResult 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -438,7 +481,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Failure = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsFailureResult 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -446,7 +491,9 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.PartialFailure = $textColour
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsPartialFailureResult 
+
             AssertWriteHostCalled -WithTextColor $textColour
         }
 
@@ -454,8 +501,53 @@ InModuleScope Prog {
             $textColour = 'DarkRed'
             $script:_logConfiguration.HostTextColor.Error = 'DarkMagenta'
             Mock Write-Host
+
             Write-LogMessage -Message 'hello world' -WriteToHost -IsError -HostTextColor $textColour
+
             AssertWriteHostCalled -WithTextColor $textColour
+        }
+
+        It 'does not attempt to write to a log file if configuration LogFileName blank' {
+            MockFileWriter
+            $script:_logConfiguration.LogFileName = ''
+            Private_SetLogFilePath
+
+           Write-LogMessage -Message 'hello world' -WriteToHost
+
+            AssertFileWriterCalled -WriterAction NONE
+        }
+
+        It 'does not attempt to write to a log file if configuration LogFileName empty string' {
+            MockFileWriter
+            $script:_logConfiguration.LogFileName = ' '
+            Private_SetLogFilePath
+
+           Write-LogMessage -Message 'hello world' -WriteToHost
+
+            AssertFileWriterCalled -WriterAction NONE
+        }
+
+        It 'does not attempt to write to a log file if configuration LogFileName $Null' {
+            MockFileWriter
+            $script:_logConfiguration.LogFileName = $Null
+            Private_SetLogFilePath
+
+           Write-LogMessage -Message 'hello world' -WriteToHost
+
+            AssertFileWriterCalled -WriterAction NONE
+        }
+
+        It 'does not attempt to write to a log file if configuration LogFileName not a valid path' {
+            MockFileWriter
+            $logFileName = 'CC:\Test\Test.log'
+            # This scenario should never occur.  Prog should throw an exception when setting 
+            # LogFileName to an invalid path via Set-LogConfiguration.
+            $script:_logConfiguration.LogFileName = $logFileName
+            $script:_logFilePath = $logFileName
+
+           Write-LogMessage -Message 'hello world' -WriteToHost
+
+            AssertFileWriterCalled -WriterAction NONE
         }
     }
 }

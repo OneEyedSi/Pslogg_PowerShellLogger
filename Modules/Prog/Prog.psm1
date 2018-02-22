@@ -98,7 +98,7 @@ $_defaultTimestampFormat = "yyyy-MM-dd hh:mm:ss.fff"
 $_logConfiguration = @{}
 $_messageFormatInfo = @{}
 
-$_logFilePath = ""
+$_logFilePath = ''
 $_logFileOverwritten = $False
 
 # Function naming conventions:
@@ -1502,6 +1502,11 @@ function Private_GetAbsolutePath (
     [string]$Path
     )
 {
+    if (-not (Test-Path $Path -IsValid))
+    {
+        throw [System.ArgumentException] "Invalid file path: '$Path'"
+    }
+
     if ([System.IO.Path]::IsPathRooted($Path))
     {
         return $Path
@@ -1537,6 +1542,12 @@ This function is NOT intended to be exported from this module.
 function Private_SetLogFilePath ()
 {
     $oldLogFilePath = $script:_logFilePath
+
+    if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFileName))
+    {
+        $script:_logFilePath = ''
+        return
+    }
 
     $logFilePath = Private_GetAbsolutePath $script:_logConfiguration.LogFileName
 

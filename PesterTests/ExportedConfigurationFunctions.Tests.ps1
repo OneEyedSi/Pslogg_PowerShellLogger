@@ -26,6 +26,10 @@ Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Forc
 
 InModuleScope Prog {
 
+    # Need to dot source the helper file within the InModuleScope block to be able to use its 
+    # functions within a test.
+    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+
     <#
     .SYNOPSIS
     Compares two hashtables and returns an array of error messages describing the differences.
@@ -532,6 +536,12 @@ InModuleScope Prog {
                 Set-LogConfiguration -LogFileName New.test 
                     
                 $script:_logConfiguration.LogFileName | Should -Be New.test
+            }
+
+            It 'throws ArgumentException if attempt to set LogFileName to an invalid path' {
+                { Set-LogConfiguration -LogFileName 'CC:\Test\Test.log' } |
+                    Assert-ExceptionThrown -WithTypeName ArgumentException `
+                                            -WithMessage 'Invalid file path'
             }
 
             It 'updates LogFilePath' {

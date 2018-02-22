@@ -27,19 +27,21 @@ Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Forc
 
 InModuleScope Prog {
 
+    # Need to dot source the helper file within the InModuleScope block to be able to use its 
+    # functions within a test.
+    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+
     Describe "GetAbsolutePath" {     
 
         It 'throws ParameterBindingValidationException if empty path supplied' {
-            $originalPath = ''
-            try
-            {
-                Private_GetAbsolutePath -Path ''
-            }
-            catch
-            {
-                $_.Exception.GetType().Name | Should -Be 'ParameterBindingValidationException'
-            }            
+            { Private_GetAbsolutePath -Path '' } | 
+                Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException
         }  
+
+        It 'throws ArgumentException if invalid path supplied' {
+            { Private_GetAbsolutePath -Path 'CC:\Test\Test.log' } | 
+                Assert-ExceptionThrown -WithTypeName ArgumentException
+        }
 
         It 'returns rooted path unchanged' {
             $originalPath = 'C:\Test\test.log'
