@@ -656,15 +656,14 @@ function Write-LogMessage (
         return
     }
 
-    if (($script:_logConfiguration.OverwriteLogFile -and (-not $script:_logFileOverwritten)) -or 
-        (-not (Test-Path $script:_logFilePath)))
+    if ($script:_logConfiguration.OverwriteLogFile -and (-not $script:_logFileOverwritten))
     {
-        $textToLog | Set-Content $script:_logFilePath
+        Set-Content -Path $script:_logFilePath -Value $textToLog
         $script:_logFileOverwritten = $True
     }
     else
     {
-        $textToLog | Add-Content $script:_logFilePath
+        Add-Content -Path $script:_logFilePath -Value $textToLog
     }
 }
 
