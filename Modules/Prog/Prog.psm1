@@ -590,6 +590,13 @@ function Write-LogMessage (
         # For text color default to the current console text color.
     }
 
+    $configuredLogLevelValue = $script:_logLevels[$script:_logConfiguration.LogLevel]
+    $messageLogLevelValue = $script:_logLevels[$LogLevel]
+    if ($messageLogLevelValue -gt $configuredLogLevelValue)
+    {
+        return
+    }
+
     if ($HostTextColor)
     {
         $TextColor = $HostTextColor
