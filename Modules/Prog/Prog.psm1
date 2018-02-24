@@ -466,7 +466,7 @@ function Write-LogMessage (
     [string]$HostTextColor,      
 
     [Parameter(Mandatory=$False)]
-    [switch]$MessageFormat,
+    [string]$MessageFormat,
 
     [Parameter(Mandatory=$False)]
     [switch]$IsError, 
