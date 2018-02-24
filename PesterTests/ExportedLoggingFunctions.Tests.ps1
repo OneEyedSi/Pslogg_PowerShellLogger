@@ -248,6 +248,38 @@ InModuleScope Prog {
             }
     }
 
+    function TestMessageFormat
+    (
+        [scriptblock]$FunctionUnderTest, 
+        [string]$ExpectedLoggedText,
+        [switch]$DoRegexMatch
+    )
+    {
+        Invoke-Command $FunctionUnderTest
+
+        Assert-MockCalled -CommandName Write-Host -Scope It -Times 1 `
+            -ParameterFilter {
+                # It's messy throwing exceptions inside a parameter filter but we get 
+                # more informative error messages which include expected and actual text, 
+                # rather than unhelpful
+                #   "Expected Write-Host in module Prog to be called at least 1 times but was called 0 times"
+                if ($DoRegexMatch.IsPresent)
+                {
+                    $Object | Should -Match $ExpectedLoggedText
+                    # Should never reach here if $Object doesn't match the regex expression. 
+                    # Should throw an exception instead.
+                    $True
+                }
+                else
+                {
+                    $Object | Should -Be $ExpectedLoggedText
+                    # Should never reach here if $Object doesn't equal the expected text. 
+                    # Should throw an exception instead.
+                    $True
+                }
+            }
+    }
+
     Describe 'Write-LogMessage' {             
 
         BeforeEach {
@@ -856,6 +888,137 @@ InModuleScope Prog {
             TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
             TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
             TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
+        }
+
+        Context 'Message Format' {
+            
+            Mock Write-Host
+            
+            It 'writes only message text when -MessageFormat contains only {Message} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'hello world' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{message}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only timestamp with default formatting when -MessageFormat contains only {Timestamp} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'formats timestamp with specified format string when -MessageFormat contains formatted {Timestamp} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d:\d\d:\d\d$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp:hh:mm:ss}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only calling object name when -MessageFormat contains only {CallingObjectName} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'Script ExportedLoggingFunctions.Tests.ps1' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallingObjectName}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only log level when -MessageFormat contains only {LogLevel} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'INFORMATION' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{LogLevel}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only SUCCESS when -MessageFormat contains only {Result} field and -IsSuccessResult set' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'SUCCESS' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Result}' `
+                                            -WriteToHost `
+                                            -IsSuccessResult
+                        }
+            }
+            
+            It 'writes only FAILURE when -MessageFormat contains only {Result} field and -IsFailureResult set' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'FAILURE' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Result}' `
+                                            -WriteToHost `
+                                            -IsFailureResult
+                        }
+            }
+            
+            It 'writes only PARTIAL FAILURE when -MessageFormat contains only {Result} field and -IsPartialFailureResult set' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'PARTIAL FAILURE' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Result}' `
+                                            -WriteToHost `
+                                            -IsPartialFailureResult
+                        }
+            }
+            
+            It 'writes only message type when -MessageFormat contains only {MessageType} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText 'INFORMATION' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{MessageType}' `
+                                            -WriteToHost
+                        }
+            }            
+            
+            It 'writes text to match all fields when -MessageFormat contains multiple fields' {
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d | INFORMATION | hello world$' `
+                    -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp} | {LogLevel} | {Message}' `
+                                            -WriteToHost 
+                        }
+            }           
+            
+            It 'uses configuration MessageFormat if -MessageFormat parameter not specified' {
+                Private_SetMessageFormat '{Timestamp:hh:mm:ss.fff} | {Message}'
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d:\d\d:\d\d\.\d\d\d | hello world$' `
+                    -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -WriteToHost 
+                        }
+            }
         }
     }
 }
