@@ -201,6 +201,53 @@ InModuleScope Prog {
         return $originalContent
     }
 
+    function TestLogLevel
+    (
+        [string]$LogLevel, 
+        [string]$MessageType, 
+        [switch]$ShouldWrite
+    )
+    {
+        $writeText = 'does not write'
+        $numberTimesShouldWrite = 0
+        if ($ShouldWrite.IsPresent)
+        {
+            $writeText = 'writes'
+            $numberTimesShouldWrite = 1
+        }
+
+        $isError = $False
+        $isWarning = $False
+        $isInformation = $False
+        $isDebug = $False
+        $isVerbose = $False
+        $isSuccess = $False
+        $isFailure = $False
+        $isPartialFailure = $False
+
+        switch ($MessageType)
+        {
+            Error					{ $isError = $True; break }
+            Warning					{ $isWarning = $True; break }
+            Information				{ $isInformation = $True; break }
+            Debug					{ $isDebug = $True; break }
+            Verbose					{ $isVerbose = $True; break }
+            SuccessResult			{ $isSuccess = $True; break }
+            FailureResult			{ $isFailure = $True; break }
+            PartialFailureResult	{ $isPartialFailure = $True }
+        }
+
+        It "$writeText message when configuration LogLevel is $LogLevel and message type is $MessageType" {
+
+                Write-LogMessage -Message 'hello world' -WriteToHost `
+                    -IsError:$isError -IsWarning:$isWarning -IsInformation:$isInformation `
+                    -IsDebug:$isDebug -IsVerbose:$isVerbose -IsSuccessResult:$isSuccess `
+                    -IsFailureResult:$isFailure -IsPartialFailureResult:$isPartialFailure
+
+                Assert-MockCalled -CommandName Write-Host -Scope It -Times $numberTimesShouldWrite
+            }
+    }
+
     Describe 'Write-LogMessage' {             
 
         BeforeEach {
@@ -507,6 +554,7 @@ InModuleScope Prog {
             It 'writes to host in Verbose text colour if -WriteToHost and -IsVerbose switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Verbose = $textColour
+                $script:_logConfiguration.LogLevel = 'Verbose'
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -IsVerbose 
 
@@ -700,6 +748,108 @@ InModuleScope Prog {
                 $newContent.Count | Should -Be 3
                 $newContent[2] | Should -BeLike '*third message*'
             }
+        }        
+
+        Context 'Log level Off' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Off'
+            }
+
+            Mock Write-Host
+
+            TestLogLevel -LogLevel Off -MessageType Error
+            TestLogLevel -LogLevel Off -MessageType Warning
+            TestLogLevel -LogLevel Off -MessageType Information
+            TestLogLevel -LogLevel Off -MessageType Debug
+            TestLogLevel -LogLevel Off -MessageType Verbose
+            TestLogLevel -LogLevel Off -MessageType SuccessResult
+            TestLogLevel -LogLevel Off -MessageType FailureResult
+            TestLogLevel -LogLevel Off -MessageType PartialFailureResult
+        }
+
+        Context 'Log level Error' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Error'
+            }
+
+            Mock Write-Host
+            
+            TestLogLevel -LogLevel Error -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel Error -MessageType Warning
+            TestLogLevel -LogLevel Error -MessageType Information
+            TestLogLevel -LogLevel Error -MessageType Debug
+            TestLogLevel -LogLevel Error -MessageType Verbose
+            TestLogLevel -LogLevel Error -MessageType SuccessResult
+            TestLogLevel -LogLevel Error -MessageType FailureResult
+            TestLogLevel -LogLevel Error -MessageType PartialFailureResult
+        }
+
+        Context 'Log level Warning' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Warning'
+            }
+
+            Mock Write-Host
+            
+            TestLogLevel -LogLevel Warning -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel Warning -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel Warning -MessageType Information
+            TestLogLevel -LogLevel Warning -MessageType Debug
+            TestLogLevel -LogLevel Warning -MessageType Verbose
+            TestLogLevel -LogLevel Warning -MessageType SuccessResult
+            TestLogLevel -LogLevel Warning -MessageType FailureResult
+            TestLogLevel -LogLevel Warning -MessageType PartialFailureResult
+        }
+
+        Context 'Log level Information' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Information'
+            }
+
+            Mock Write-Host
+            
+            TestLogLevel -LogLevel Information -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel Information -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel Information -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel Information -MessageType Debug
+            TestLogLevel -LogLevel Information -MessageType Verbose
+            TestLogLevel -LogLevel Information -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel Information -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel Information -MessageType PartialFailureResult -ShouldWrite
+        }
+
+        Context 'Log level Debug' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Debug'
+            }
+
+            Mock Write-Host
+            
+            TestLogLevel -LogLevel Debug -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType Debug -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType Verbose
+            TestLogLevel -LogLevel Debug -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel Debug -MessageType PartialFailureResult -ShouldWrite
+        }
+
+        Context 'Log level Verbose' {
+            BeforeEach {
+                $script:_logConfiguration.LogLevel = 'Verbose'
+            }
+
+            Mock Write-Host
+            
+            TestLogLevel -LogLevel Verbose -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType Debug -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType Verbose -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel Verbose -MessageType PartialFailureResult -ShouldWrite
         }
     }
 }
