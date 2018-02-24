@@ -756,15 +756,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Off'
 
-            TestLogLevel -LogLevel Off -MessageType Error
-            TestLogLevel -LogLevel Off -MessageType Warning
-            TestLogLevel -LogLevel Off -MessageType Information
-            TestLogLevel -LogLevel Off -MessageType Debug
-            TestLogLevel -LogLevel Off -MessageType Verbose
-            TestLogLevel -LogLevel Off -MessageType SuccessResult
-            TestLogLevel -LogLevel Off -MessageType FailureResult
-            TestLogLevel -LogLevel Off -MessageType PartialFailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType Error
+            TestLogLevel -LogLevel $logLevel -MessageType Warning
+            TestLogLevel -LogLevel $logLevel -MessageType Information
+            TestLogLevel -LogLevel $logLevel -MessageType Debug
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
         }
 
         Context 'Log level Error' {
@@ -773,15 +774,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Error'
             
-            TestLogLevel -LogLevel Error -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel Error -MessageType Warning
-            TestLogLevel -LogLevel Error -MessageType Information
-            TestLogLevel -LogLevel Error -MessageType Debug
-            TestLogLevel -LogLevel Error -MessageType Verbose
-            TestLogLevel -LogLevel Error -MessageType SuccessResult
-            TestLogLevel -LogLevel Error -MessageType FailureResult
-            TestLogLevel -LogLevel Error -MessageType PartialFailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Warning
+            TestLogLevel -LogLevel $logLevel -MessageType Information
+            TestLogLevel -LogLevel $logLevel -MessageType Debug
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
         }
 
         Context 'Log level Warning' {
@@ -790,15 +792,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Warning'
             
-            TestLogLevel -LogLevel Warning -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel Warning -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel Warning -MessageType Information
-            TestLogLevel -LogLevel Warning -MessageType Debug
-            TestLogLevel -LogLevel Warning -MessageType Verbose
-            TestLogLevel -LogLevel Warning -MessageType SuccessResult
-            TestLogLevel -LogLevel Warning -MessageType FailureResult
-            TestLogLevel -LogLevel Warning -MessageType PartialFailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Information
+            TestLogLevel -LogLevel $logLevel -MessageType Debug
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
         }
 
         Context 'Log level Information' {
@@ -807,15 +810,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Information'
             
-            TestLogLevel -LogLevel Information -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel Information -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel Information -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel Information -MessageType Debug
-            TestLogLevel -LogLevel Information -MessageType Verbose
-            TestLogLevel -LogLevel Information -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel Information -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel Information -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Debug
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
         }
 
         Context 'Log level Debug' {
@@ -824,15 +828,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Debug'
             
-            TestLogLevel -LogLevel Debug -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType Debug -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType Verbose
-            TestLogLevel -LogLevel Debug -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel Debug -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Debug -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
         }
 
         Context 'Log level Verbose' {
@@ -841,15 +846,16 @@ InModuleScope Prog {
             }
 
             Mock Write-Host
+            $logLevel = 'Verbose'
             
-            TestLogLevel -LogLevel Verbose -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType Debug -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType Verbose -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel Verbose -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Debug -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType Verbose -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
+            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
         }
     }
 }
