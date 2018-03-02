@@ -154,7 +154,14 @@ messages to be changed:
     4) The message format:  In addition to the specified message, the text written to the log may 
         include additional fields that are automatically populated, such as a timestamp or the  
         name of the function writing to the log.  The format of the logged text, including the 
-        fields to be displayed, may be specified in the logging configuration.
+        fields to be displayed, may be specified in the logging configuration;
+
+    5) Whether an existing log file will be overwritten or appended to:  If a log file is 
+        specified in the configuration you can determine whether new log messages will overwrite 
+        an existing log file with the same file name or will be appended to the end of it.  If 
+        the option to overwrite an existing file is chosen it will only be overwritten by the 
+        first message written to the log in a given session.  Subsequent messages written in the 
+        same session will be appended to the log file.
 
 The logging configuration may be altered via function Set-LogConfiguration.  Function 
 Get-LogConfiguration will return a copy of the current configuration as a hash table.  The 
@@ -778,10 +785,16 @@ A hash table with the following keys:
         The default value is $True;
 
     OverwriteLogFile: If $True any existing log file with the same name as LogFileName, including 
-        a date if IncludeDateInFileName is set, will be overwritten.  If $False new log messages 
-        will be appended to the end of the existing log file.  If no file with the same name 
-        exists it will be created, regardless of the value of OverwriteLogFile.  The default value 
-        is $True;
+        the date if IncludeDateInFileName is set, will be overwritten by the first message logged 
+        in a given session.  Subsequent messages written in the same session will be appended to 
+        the end of the log file.  
+        
+        If $False new log messages will be appended to the end of the existing log file.  
+        
+        If no file with the same name exists it will be created, regardless of the value of 
+        OverwriteLogFile.  
+        
+        The default value is $True;
 
     WriteToHost: If $True then all log messages wiill be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
@@ -925,10 +938,16 @@ A hash table representing all configuration settings.  It must have the followin
         The default value is $True;
 
     OverwriteLogFile: If $True any existing log file with the same name as LogFileName, including 
-        a date if IncludeDateInFileName is set, will be overwritten.  If $False new log messages 
-        will be appended to the end of the existing log file.  If no file with the same name 
-        exists it will be created, regardless of the value of OverwriteLogFile.  The default value 
-        is $True;
+        the date if IncludeDateInFileName is set, will be overwritten by the first message logged 
+        in a given session.  Subsequent messages written in the same session will be appended to 
+        the end of the log file.  
+        
+        If $False new log messages will be appended to the end of the existing log file.  
+        
+        If no file with the same name exists it will be created, regardless of the value of 
+        OverwriteLogFile.  
+        
+        The default value is $True;
 
     WriteToHost: If $True then all log messages wiill be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
