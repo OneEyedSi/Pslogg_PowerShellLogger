@@ -118,14 +118,14 @@ InModuleScope Prog {
         {
             switch ($messageType)
             {
-                'ERROR'				{ $timesWriteErrorCalled = 1; break }
-                'WARNING'   		{ $timesWriteWarningCalled = 1; break }
-                'INFORMATION'		{ $timesWriteInformationCalled = 1; break }
-                'DEBUG'				{ $timesWriteDebugCalled = 1; break }
-                'VERBOSE'			{ $timesWriteVerboseCalled = 1; break } 
-                'SUCCESS'			{ $timesWriteInformationCalled = 1; break }
-                'FAILURE'			{ $timesWriteInformationCalled = 1; break }
-                'PARTIAL FAILURE'	{ $timesWriteInformationCalled = 1; break } 
+                ERROR				{ $timesWriteErrorCalled = 1; break }
+                WARNING   			{ $timesWriteWarningCalled = 1; break }
+                INFORMATION			{ $timesWriteInformationCalled = 1; break }
+                DEBUG				{ $timesWriteDebugCalled = 1; break }
+                VERBOSE				{ $timesWriteVerboseCalled = 1; break } 
+                SUCCESS				{ $timesWriteInformationCalled = 1; break }
+                FAILURE				{ $timesWriteInformationCalled = 1; break }
+                PARTIAL_FAILURE		{ $timesWriteInformationCalled = 1; break } 
                 default				{ $timesWriteInformationCalled = 1 }                                                             
             } 
         }
@@ -201,7 +201,7 @@ InModuleScope Prog {
         return $originalContent
     }
 
-    function TestLogLevel
+    function TestLogLevelWithMessageTypeSwitch
     (
         [string]$LogLevel, 
         [string]$MessageType, 
@@ -225,24 +225,81 @@ InModuleScope Prog {
         $isFailure = $False
         $isPartialFailure = $False
 
+        $switchName = ''
+
         switch ($MessageType)
         {
-            Error					{ $isError = $True; break }
-            Warning					{ $isWarning = $True; break }
-            Information				{ $isInformation = $True; break }
-            Debug					{ $isDebug = $True; break }
-            Verbose					{ $isVerbose = $True; break }
-            SuccessResult			{ $isSuccess = $True; break }
-            FailureResult			{ $isFailure = $True; break }
-            PartialFailureResult	{ $isPartialFailure = $True }
+            ERROR { 
+                $isError = $True 
+                $switchName = '-IsError'
+                break 
+            }
+            WARNING	{ 
+                $isWarning = $True 
+                $switchName = '-IsWarning'
+                break 
+            }
+            INFORMATION	{ 
+                $isInformation = $True 
+                $switchName = '-IsInformation'
+                break 
+            }
+            DEBUG { 
+                $isDebug = $True 
+                $switchName = '-IsDebug'
+                break 
+            }
+            VERBOSE { 
+                $isVerbose = $True 
+                $switchName = '-IsVerbose'
+                break 
+            }
+            SUCCESS { 
+                $isSuccess = $True 
+                $switchName = '-IsSuccessResult'
+                break 
+            }
+            FAILURE	{ 
+                $isFailure = $True 
+                $switchName = '-IsFailureResult'
+                break 
+            }
+            PARTIAL_FAILURE { 
+                $isPartialFailure = $True 
+                $switchName = '-IsPartialFailureResult'
+                break 
+            }
         }
 
-        It "$writeText message when configuration LogLevel is $LogLevel and message type is $MessageType" {
+        It "$writeText message when configuration LogLevel is $LogLevel and $switchName switch is set" {
 
                 Write-LogMessage -Message 'hello world' -WriteToHost `
                     -IsError:$isError -IsWarning:$isWarning -IsInformation:$isInformation `
                     -IsDebug:$isDebug -IsVerbose:$isVerbose -IsSuccessResult:$isSuccess `
                     -IsFailureResult:$isFailure -IsPartialFailureResult:$isPartialFailure
+
+                Assert-MockCalled -CommandName Write-Host -Scope It -Times $numberTimesShouldWrite
+            }
+    }
+
+    function TestLogLevelWithMessageTypeText
+    (
+        [string]$LogLevel, 
+        [string]$MessageType, 
+        [switch]$ShouldWrite
+    )
+    {
+        $writeText = 'does not write'
+        $numberTimesShouldWrite = 0
+        if ($ShouldWrite.IsPresent)
+        {
+            $writeText = 'writes'
+            $numberTimesShouldWrite = 1
+        }
+
+        It "$writeText message when configuration LogLevel is $LogLevel and message type is $MessageType" {
+
+                Write-LogMessage -Message 'hello world' -WriteToHost -MessageType $MessageType
 
                 Assert-MockCalled -CommandName Write-Host -Scope It -Times $numberTimesShouldWrite
             }
@@ -312,193 +369,301 @@ InModuleScope Prog {
             # the same Context.
             Mock Write-Host
 
-            It 'throws exception if an invalid -HostTextColor is specified' {
+            It 'does not throw exception when -Message is $Null' {
+                
+                { Write-LogMessage -Message $Null } | 
+                    Assert-ExceptionThrown -Not
+            }
+
+            It 'writes to log when -Message is $Null' {
+                # Only want the message field logged, so Prog isn't logging any text at all.
+                Private_SetMessageFormat '{Message}'
+
+                Write-LogMessage -Message $Null
+
+                Assert-MockCalled -CommandName Write-Host -Scope It -Times 1
+            }
+
+            It 'does not throw exception when -Message is empty string' {
+                
+                { Write-LogMessage -Message '' } | 
+                    Assert-ExceptionThrown -Not
+            }
+
+            It 'writes to log when -Message is empty string' {
+                # Only want the message field logged, so Prog isn't logging any text at all.
+                Private_SetMessageFormat '{Message}'
+
+                Write-LogMessage -Message ''
+
+                Assert-MockCalled -CommandName Write-Host -Scope It -Times 1
+            }
+
+            It 'does not throw exception when Message passed by position' {
+                { Write-LogMessage 'hello world' } | 
+                    Assert-ExceptionThrown -Not                                     
+            }
+
+            It 'writes to log when Message passed by position' {
+                # Only want the message field logged, so Prog isn't logging any text at all.
+                Private_SetMessageFormat '{Message}'
+
+                Write-LogMessage 'hello world'
+
+                Assert-MockCalled -CommandName Write-Host -Scope It -Times 1
+            }
+
+            It 'throws exception when an invalid -HostTextColor is specified' {
                 { Write-LogMessage -Message 'hello world' -HostTextColor DeepPurple } | 
                     Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException `
                         -WithMessage "'DeepPurple' is not a valid text color"                                       
             }
 
-            It 'does not throw exception if no -HostTextColor is specified' {
+            It 'does not throw exception when no -HostTextColor is specified' {
                 
                 { Write-LogMessage -Message 'hello world' } | 
                     Assert-ExceptionThrown -Not
             }
 
-            It 'does not throw exception if valid -HostTextColor is specified' {
+            It 'does not throw exception when valid -HostTextColor is specified' {
                 
                 { Write-LogMessage -Message 'hello world' -HostTextColor Cyan } | 
                     Assert-ExceptionThrown -Not
             }
 
-            It 'throws exception if both -IsError and -IsWarning switches set' {
+            It 'does not throw exception when neither -MessageType nor a message type switch are specified' {
+                { Write-LogMessage 'hello world' } | 
+                    Assert-ExceptionThrown -Not
+            }
+
+            It 'throws exception when an invalid -MessageType is specified' {
+                { Write-LogMessage 'hello world' -MessageType INVALID } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException `
+                        -WithMessage "Cannot validate argument on parameter 'MessageType'"                                       
+            }
+
+            It 'does not throw exception when valid -MessageType is specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR } | 
+                    Assert-ExceptionThrown -Not
+            }
+
+            It 'throws exception when both -MessageType and -IsError are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsError } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsWarning are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsWarning } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsInformation are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsInformation } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsDebug are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsDebug } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsVerbose are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsVerbose } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsSuccessResult are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsSuccessResult } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsFailureResult are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsFailureResult } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -MessageType and -IsPartialFailureResult are specified' {
+                { Write-LogMessage 'hello world' -MessageType ERROR -IsPartialFailureResult } | 
+                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
+                        -WithMessage 'Parameter set cannot be resolved'
+            }
+
+            It 'throws exception when both -IsError and -IsWarning switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsWarning } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsInformation switches set' {
+            It 'throws exception when both -IsError and -IsInformation switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsInformation } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsDebug switches set' {
+            It 'throws exception when both -IsError and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsDebug } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsVerbose switches set' {
+            It 'throws exception when both -IsError and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsVerbose } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsSuccessResult switches set' {
+            It 'throws exception when both -IsError and -IsSuccessResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsSuccessResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsFailureResult switches set' {
+            It 'throws exception when both -IsError and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsError and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsError and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsInformation switches set' {
+            It 'throws exception when both -IsWarning and -IsInformation switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsInformation } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsDebug switches set' {
+            It 'throws exception when both -IsWarning and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsDebug } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsVerbose switches set' {
+            It 'throws exception when both -IsWarning and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsVerbose } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsSuccessResult switches set' {
+            It 'throws exception when both -IsWarning and -IsSuccessResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsSuccessResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsFailureResult switches set' {
+            It 'throws exception when both -IsWarning and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsWarning and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsWarning and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsInformation and -IsDebug switches set' {
+            It 'throws exception when both -IsInformation and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsDebug } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsInformation and -IsVerbose switches set' {
+            It 'throws exception when both -IsInformation and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsVerbose } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsInformation and -IsSuccessResult switches set' {
+            It 'throws exception when both -IsInformation and -IsSuccessResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsSuccessResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsInformation and -IsFailureResult switches set' {
+            It 'throws exception when both -IsInformation and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsInformation and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsInformation and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsDebug and -IsVerbose switches set' {
+            It 'throws exception when both -IsDebug and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsDebug -IsVerbose } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsDebug and -IsSuccessResult switches set' {
+            It 'throws exception when both -IsDebug and -IsSuccessResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsDebug -IsSuccessResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsDebug and -IsFailureResult switches set' {
+            It 'throws exception when both -IsDebug and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsDebug -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsDebug and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsDebug and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsDebug -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsVerbose and -IsSuccessResult switches set' {
+            It 'throws exception when both -IsVerbose and -IsSuccessResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsVerbose -IsSuccessResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsVerbose and -IsFailureResult switches set' {
+            It 'throws exception when both -IsVerbose and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsVerbose -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsVerbose and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsVerbose and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsVerbose -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsSuccessResult and -IsFailureResult switches set' {
+            It 'throws exception when both -IsSuccessResult and -IsFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsSuccessResult -IsFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsSuccessResult and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsSuccessResult and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsSuccessResult -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -IsFailureResult and -IsPartialFailureResult switches set' {
+            It 'throws exception when both -IsFailureResult and -IsPartialFailureResult switches set' {
                 { Write-LogMessage -Message 'hello world' -IsFailureResult -IsPartialFailureResult } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Message Type switch parameter may be set'                                        
             }
 
-            It 'throws exception if both -WriteToHost and -WriteToStreams switches set' {
+            It 'throws exception when both -WriteToHost and -WriteToStreams switches set' {
                 { Write-LogMessage -Message 'hello world' -WriteToHost -WriteToStreams } | 
                     Assert-ExceptionThrown -WithTypeName ArgumentException `
                         -WithMessage 'Only one Destination switch parameter may be set'                                        
@@ -508,21 +673,21 @@ InModuleScope Prog {
         Context 'Logging to host and PowerShell streams' {
             MockHostAndStreamWriters
 
-            It 'writes to host if -WriteToHost switch set' {
+            It 'writes to host when -WriteToHost switch set' {
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
                 AssertCorrectWriteCommandCalled -WriteToHost                          
             }
 
-            It 'writes to stream if -WriteToStreams switch set' {
+            It 'writes to stream when -WriteToStreams switch set' {
                 
                 Write-LogMessage -Message 'hello world' -WriteToStreams
 
                 AssertCorrectWriteCommandCalled -WriteToStreams -MessageType 'INFORMATION'                          
             }
 
-            It 'writes to host if neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost set' {
+            It 'writes to host when neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost set' {
                 $script:_logConfiguration.WriteToHost = $True
                 
                 Write-LogMessage -Message 'hello world'
@@ -530,7 +695,7 @@ InModuleScope Prog {
                 AssertCorrectWriteCommandCalled -WriteToHost
             }
 
-            It 'writes to stream if neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost cleared' {
+            It 'writes to stream when neither -WriteToHost nor -WriteToStreams switches set and configuration.WriteToHost cleared' {
                 $script:_logConfiguration.WriteToHost = $False
                 
                 Write-LogMessage -Message 'hello world'
@@ -547,7 +712,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Error text colour if -WriteToHost and -IsError switches set, and -HostTextColor not specified' {
+            It 'writes to host in Error text colour when -WriteToHost and -IsError switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Error = $textColour
                 
@@ -556,7 +721,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Warning text colour if -WriteToHost and -IsWarning switches set, and -HostTextColor not specified' {
+            It 'writes to host in Warning text colour when -WriteToHost and -IsWarning switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Warning = $textColour
                 
@@ -565,7 +730,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Debug text colour if -WriteToHost and -IsDebug switches set, and -HostTextColor not specified' {
+            It 'writes to host in Debug text colour when -WriteToHost and -IsDebug switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Debug = $textColour
                 
@@ -574,7 +739,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Information text colour if -WriteToHost and -IsInformation switches set, and -HostTextColor not specified' {
+            It 'writes to host in Information text colour when -WriteToHost and -IsInformation switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Information = $textColour
                 
@@ -583,7 +748,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Verbose text colour if -WriteToHost and -IsVerbose switches set, and -HostTextColor not specified' {
+            It 'writes to host in Verbose text colour when -WriteToHost and -IsVerbose switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Verbose = $textColour
                 $script:_logConfiguration.LogLevel = 'Verbose'
@@ -593,7 +758,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Success text colour if -WriteToHost and -IsSuccessResult switches set, and -HostTextColor not specified' {
+            It 'writes to host in Success text colour when -WriteToHost and -IsSuccessResult switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Success = $textColour
                 
@@ -602,7 +767,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Failure text colour if -WriteToHost and -IsFailureResult switches set, and -HostTextColor not specified' {
+            It 'writes to host in Failure text colour when -WriteToHost and -IsFailureResult switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Failure = $textColour
                 
@@ -611,7 +776,7 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in PartialFailure text colour if -WriteToHost and -IsPartialFailureResult switches set, and -HostTextColor not specified' {
+            It 'writes to host in PartialFailure text colour when -WriteToHost and -IsPartialFailureResult switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.PartialFailure = $textColour
                 
@@ -790,14 +955,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Off'
 
-            TestLogLevel -LogLevel $logLevel -MessageType Error
-            TestLogLevel -LogLevel $logLevel -MessageType Warning
-            TestLogLevel -LogLevel $logLevel -MessageType Information
-            TestLogLevel -LogLevel $logLevel -MessageType Debug
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE
+            
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE
         }
 
         Context 'Log level Error' {
@@ -808,14 +982,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Error'
             
-            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Warning
-            TestLogLevel -LogLevel $logLevel -MessageType Information
-            TestLogLevel -LogLevel $logLevel -MessageType Debug
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE
+
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE
         }
 
         Context 'Log level Warning' {
@@ -826,14 +1009,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Warning'
             
-            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Information
-            TestLogLevel -LogLevel $logLevel -MessageType Debug
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE
+
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE
         }
 
         Context 'Log level Information' {
@@ -844,14 +1036,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Information'
             
-            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Debug
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
+
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
         }
 
         Context 'Log level Debug' {
@@ -862,14 +1063,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Debug'
             
-            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Debug -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
+
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
         }
 
         Context 'Log level Verbose' {
@@ -880,14 +1090,23 @@ InModuleScope Prog {
             Mock Write-Host
             $logLevel = 'Verbose'
             
-            TestLogLevel -LogLevel $logLevel -MessageType Error -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Warning -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Information -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Debug -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType Verbose -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType SuccessResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType FailureResult -ShouldWrite
-            TestLogLevel -LogLevel $logLevel -MessageType PartialFailureResult -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType DEBUG -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType VERBOSE -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeSwitch -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
+            
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType ERROR -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType WARNING -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType INFORMATION -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType DEBUG -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType VERBOSE -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType SUCCESS -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType FAILURE -ShouldWrite
+            TestLogLevelWithMessageTypeText -LogLevel $logLevel -MessageType PARTIAL_FAILURE -ShouldWrite
         }
 
         Context 'Message Format' {
@@ -975,7 +1194,7 @@ InModuleScope Prog {
             
             It 'writes only PARTIAL FAILURE when -MessageFormat contains only {Result} field and -IsPartialFailureResult set' {
                 TestMessageFormat `
-                    -ExpectedLoggedText 'PARTIAL FAILURE' `
+                    -ExpectedLoggedText 'PARTIAL_FAILURE' `
                     -FunctionUnderTest `
                         { 
                             Write-LogMessage -Message 'hello world' `
@@ -1008,7 +1227,7 @@ InModuleScope Prog {
                         }
             }           
             
-            It 'uses configuration MessageFormat if -MessageFormat parameter not specified' {
+            It 'uses configuration MessageFormat when -MessageFormat parameter not specified' {
                 Private_SetMessageFormat '{Timestamp:hh:mm:ss.fff} | {Message}'
                 TestMessageFormat `
                     -ExpectedLoggedText '^\d\d:\d\d:\d\d\.\d\d\d | hello world$' `

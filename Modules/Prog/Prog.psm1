@@ -463,49 +463,67 @@ or IsPartialFailureResult.
 WriteToHost and WriteToStreams cannot both be set at the same time.
 
 #>
-function Write-LogMessage (
-    [Parameter(Mandatory=$False)]
-    [AllowEmptyString()]
-    [string]$Message,
-
-    [Parameter(Mandatory=$False)]
-    [ValidateScript({Private_ValidateHostColor $_})]
-    [string]$HostTextColor,      
-
-    [Parameter(Mandatory=$False)]
-    [string]$MessageFormat,
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsError, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsWarning,
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsInformation, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsDebug, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsVerbose, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsSuccessResult, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsFailureResult, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$IsPartialFailureResult, 
-
-    [Parameter(Mandatory=$False)]
-    [switch]$WriteToHost,      
-
-    [Parameter(Mandatory=$False)]
-    [switch]$WriteToStreams
-    )
+function Write-LogMessage     
 {
+    [CmdletBinding(DefaultParameterSetName="MessageTypeText")]
+    Param
+    (
+        [Parameter(Mandatory=$False, 
+                    Position=0)]
+        [string]$Message,
+
+        [Parameter(Mandatory=$False)]
+        [ValidateScript({Private_ValidateHostColor $_})]
+        [string]$HostTextColor,      
+
+        [Parameter(Mandatory=$False)]
+        [string]$MessageFormat,      
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeText")]
+        [ValidateSet('ERROR', 'WARNING', 'INFORMATION', 'DEBUG', 'VERBOSE', 
+                    'SUCCESS', 'FAILURE', 'PARTIAL_FAILURE')]
+        [string]$MessageType,
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsError, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsWarning,
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsInformation, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsDebug, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsVerbose, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsSuccessResult, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsFailureResult, 
+
+        [Parameter(Mandatory=$False,
+                     ParameterSetName="MessageTypeSwitches")]
+        [switch]$IsPartialFailureResult, 
+
+        [Parameter(Mandatory=$False)]
+        [switch]$WriteToHost,      
+
+        [Parameter(Mandatory=$False)]
+        [switch]$WriteToStreams
+    )
+
     Private_ValidateSwitchParameterGroup -SwitchList $IsError,$IsWarning,$IsInformation,$IsDebug,$IsVerbose,$IsSuccessResult,$IsFailureResult,$IsPartialFailureResult `
 		-ErrorMessage "Only one Message Type switch parameter may be set when calling the function. Message Type switch parameters: -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose, -IsSuccessResult, -IsFailureResult, -IsPartialFailureResult"
 
@@ -516,7 +534,6 @@ function Write-LogMessage (
     $CallingObjectName = ""
     $LogLevel = $Null
     $Result = "UNKNOWN"
-    $MessageType = $Null
     $TextColor = $Null
 
     $messageFormatInfo = $script:_messageFormatInfo
@@ -529,6 +546,62 @@ function Write-LogMessage (
     if ($messageFormatInfo.FieldsPresent -contains "CallingObjectName")
     {
         $CallingObjectName = Private_GetCallingFunctionName
+    }
+
+    # Parameter sets mean either $MessageType is supplied or a message type switch, such as 
+    # -IsError, but not both.  Of course, they're all optional so none have to be specified, in 
+    # which case we set the default values:
+
+    switch ($MessageType)
+    {
+        ERROR	{
+				$LogLevel = "ERROR"
+				$Result = ''
+				$TextColor = $script:_logConfiguration.HostTextColor.Error
+				break
+			}
+        WARNING	{
+				$LogLevel = "WARNING"
+				$Result = ''
+				$TextColor = $script:_logConfiguration.HostTextColor.Warning
+				break
+			}
+        INFORMATION	{
+				$LogLevel = "INFORMATION"
+				$Result = ''
+				$TextColor = $script:_logConfiguration.HostTextColor.Information
+				break
+			}
+        DEBUG	{
+				$LogLevel = "DEBUG"
+				$Result = ''
+				$TextColor = $script:_logConfiguration.HostTextColor.Debug
+				break
+			}
+        VERBOSE	{
+				$LogLevel = "VERBOSE"
+				$Result = ''
+				$TextColor = $script:_logConfiguration.HostTextColor.Verbose
+				break
+			}
+        SUCCESS	{
+				$LogLevel = "INFORMATION"
+				$Result = "SUCCESS"
+				$TextColor = $script:_logConfiguration.HostTextColor.Success
+				break
+			}
+        FAILURE	{
+				$LogLevel = "INFORMATION"
+				$Result = "FAILURE"
+				$TextColor = $script:_logConfiguration.HostTextColor.Failure
+				break
+			}
+        PARTIAL_FAILURE {
+				$LogLevel = "INFORMATION"
+				$Result = "PARTIAL_FAILURE"
+				$TextColor = $script:_logConfiguration.HostTextColor.PartialFailure
+				break
+			}
     }
 
     if ($IsError.IsPresent)
@@ -583,8 +656,8 @@ function Write-LogMessage (
     elseif ($IsPartialFailureResult.IsPresent)
     {
         $LogLevel = "INFORMATION"
-        $Result = "PARTIAL FAILURE"
-        $MessageType = "PARTIAL FAILURE"
+        $Result = "PARTIAL_FAILURE"
+        $MessageType = "PARTIAL_FAILURE"
         $TextColor = $script:_logConfiguration.HostTextColor.PartialFailure
     }
 
