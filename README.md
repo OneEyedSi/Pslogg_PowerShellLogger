@@ -1,6 +1,8 @@
 # Prog
 A PowerShell module for logging messages to the host, to PowerShell streams, or to a log file.
 
+### master branch build status: [![build status](https://ci.appveyor.com/api/projects/status/0xu4p7bvxdxgkaql/branch/master?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/prog-powershelllogger/branch/master)
+
 ## Getting Started
 Copy the Prog_PowerShellLoggingModule > Modules > Prog folder, with its contents, to one of the 
 locations that PowerShell recognises for modules.  The two default locations are:
