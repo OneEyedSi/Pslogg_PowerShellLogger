@@ -2,6 +2,7 @@
 A PowerShell module for logging messages to the host, to PowerShell streams, or to a log file.
 
 ### master branch build status: [![build status](https://ci.appveyor.com/api/projects/status/0xu4p7bvxdxgkaql/branch/master?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/prog-powershelllogger/branch/master)
+### v0.9 branch build status: [![build status](https://ci.appveyor.com/api/projects/status/0xu4p7bvxdxgkaql/branch/v0.9?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/prog-powershelllogger/branch/v0.9)
 
 ## Getting Started
 Copy the Prog_PowerShellLoggingModule > Modules > Prog folder, with its contents, to one of the 
