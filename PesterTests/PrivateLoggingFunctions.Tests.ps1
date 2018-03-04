@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Tests of the private logging functions in the Prog module.
 
@@ -33,7 +33,7 @@ InModuleScope Prog {
             Mock Get-PSCallStack { return $Null }
 
             It 'returns "[UNKNOWN CALLER]"' {
-                Private_GetCallingFunctionName | Should -Be "[UNKNOWN CALLER]"          
+                Private_GetCallerName | Should -Be "[UNKNOWN CALLER]"          
             } 
         }    
 
@@ -41,7 +41,7 @@ InModuleScope Prog {
             Mock Get-PSCallStack { return @() }
 
             It 'returns "[UNKNOWN CALLER]"' {
-                Private_GetCallingFunctionName | Should -Be "[UNKNOWN CALLER]"          
+                Private_GetCallerName | Should -Be "[UNKNOWN CALLER]"          
             } 
         }  
 
@@ -49,13 +49,13 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 return $callStack
             }
 
             It 'returns "----"' {
-                Private_GetCallingFunctionName | Should -Be "----"
+                Private_GetCallerName | Should -Be "----"
             } 
         }  
 
@@ -63,7 +63,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName=$Null }
                 $callStack += $stackFrame
@@ -71,7 +71,7 @@ InModuleScope Prog {
             }
 
             It 'returns "[CONSOLE]"' {
-                Private_GetCallingFunctionName | Should -Be "[CONSOLE]"          
+                Private_GetCallerName | Should -Be "[CONSOLE]"          
             } 
         }   
 
@@ -79,7 +79,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -87,7 +87,7 @@ InModuleScope Prog {
             }
 
             It 'returns "[CONSOLE]"' {
-                Private_GetCallingFunctionName | Should -Be "[CONSOLE]"          
+                Private_GetCallerName | Should -Be "[CONSOLE]"          
             } 
         }  
 
@@ -95,7 +95,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -103,7 +103,7 @@ InModuleScope Prog {
             }
 
             It 'returns "Script <script name>"' {
-                Private_GetCallingFunctionName | Should -Be "Script Test.ps1"
+                Private_GetCallerName | Should -Be "Script Test.ps1"
             } 
         } 
 
@@ -111,7 +111,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallingFunctionName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='TestFunction' }
                 $callStack += $stackFrame
@@ -119,7 +119,7 @@ InModuleScope Prog {
             }
 
             It 'returns "<function name>"' {
-                Private_GetCallingFunctionName | Should -Be "TestFunction"
+                Private_GetCallerName | Should -Be "TestFunction"
             } 
         }
     }

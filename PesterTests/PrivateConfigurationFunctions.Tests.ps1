@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Tests of the private configuration functions in the Prog module.
 

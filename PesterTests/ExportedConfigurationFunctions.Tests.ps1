@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Tests of the exported configuration functions in the Prog module.
 
@@ -239,9 +239,9 @@ InModuleScope Prog {
     function GetDefaultMessageFormatInfo ()
     {
         $messageFormatInfo = @{
-                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}'
-                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallingObjectName} | ${MessageType} | ${Message}'
-                                FieldsPresent = @('Message', 'Timestamp', 'CallingObjectName', 'MessageType')
+                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}'
+                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageType} | ${Message}'
+                                FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageType')
                             }
         return $messageFormatInfo
     }

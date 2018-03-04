@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Tests of the shared private functions in the Prog module.
 
@@ -313,8 +313,8 @@ InModuleScope Prog {
             TestWorkingFormatFieldSurroundedBySpaces -FieldName Message
         }
 
-        It 'replaces {CallingObjectName} placeholder with "${CallingObjectName}" in WorkingFormat' {
-            TestWorkingFormatFieldSurroundedBySpaces -FieldName CallingObjectName
+        It 'replaces {CallerName} placeholder with "${CallerName}" in WorkingFormat' {
+            TestWorkingFormatFieldSurroundedBySpaces -FieldName CallerName
         }
 
         It 'replaces {LogLevel} placeholder with "${LogLevel}" in WorkingFormat' {
@@ -351,8 +351,8 @@ InModuleScope Prog {
         }
 
         It 'replaces all other placeholders that follow a {TimeStamp} placeholder correctly' {
-            $messageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}'
-            $workingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallingObjectName} | ${MessageType} | ${Message}'
+            $messageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}'
+            $workingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageType} | ${Message}'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
@@ -375,8 +375,8 @@ InModuleScope Prog {
         }
 
         It 'replaces multiple placeholders in WorkingFormat' {
-            $messageFormat = 'xxx {LogLevel} {CallingObjectName} {Message} xxx'
-            $workingFormat = 'xxx ${LogLevel} ${CallingObjectName} ${Message} xxx'
+            $messageFormat = 'xxx {LogLevel} {CallerName} {Message} xxx'
+            $workingFormat = 'xxx ${LogLevel} ${CallerName} ${Message} xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
@@ -398,18 +398,18 @@ InModuleScope Prog {
         }
 
         TestFieldsPresent "Message"
-        TestFieldsPresent "CallingObjectName"
+        TestFieldsPresent "CallerName"
         TestFieldsPresent "LogLevel"
         TestFieldsPresent "Result"
         TestFieldsPresent "MessageType"
         TestFieldsPresent "Timestamp"
 
         It 'adds multiple field names to FieldsPresent if multiple placeholders in message format text' {
-            $messageFormat = 'xxx {LogLevel} {CallingObjectName} {Message} xxx'
+            $messageFormat = 'xxx {LogLevel} {CallerName} {Message} xxx'
             $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
             $hashTable.FieldsPresent.Count | Should -Be 3
             $hashTable.FieldsPresent.Contains("LogLevel")
-            $hashTable.FieldsPresent.Contains("CallingObjectName")
+            $hashTable.FieldsPresent.Contains("CallerName")
             $hashTable.FieldsPresent.Contains("Message")
         }
     }

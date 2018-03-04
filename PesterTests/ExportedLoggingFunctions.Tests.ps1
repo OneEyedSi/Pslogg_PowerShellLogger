@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
 Tests of the exported Prog functions in the Prog module.
 
@@ -43,9 +43,9 @@ InModuleScope Prog {
     function GetDefaultMessageFormatInfo ()
     {
         $messageFormatInfo = @{
-                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}'
-                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallingObjectName} | ${MessageType} | ${Message}'
-                                FieldsPresent = @('Message', 'Timestamp', 'CallingObjectName', 'MessageType')
+                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}'
+                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageType} | ${Message}'
+                                FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageType')
                             }
         return $messageFormatInfo
     }
@@ -1146,13 +1146,13 @@ InModuleScope Prog {
                         }
             }
             
-            It 'writes only calling object name when -MessageFormat contains only {CallingObjectName} field' {
+            It 'writes only calling object name when -MessageFormat contains only {CallerName} field' {
                 TestMessageFormat `
                     -ExpectedLoggedText 'Script ExportedLoggingFunctions.Tests.ps1' `
                     -FunctionUnderTest `
                         { 
                             Write-LogMessage -Message 'hello world' `
-                                            -MessageFormat '{CallingObjectName}' `
+                                            -MessageFormat '{CallerName}' `
                                             -WriteToHost 
                         }
             }

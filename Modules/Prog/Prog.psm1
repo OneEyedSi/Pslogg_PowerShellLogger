@@ -89,7 +89,7 @@ $_defaultLogConfiguration = @{
                                 IncludeDateInFileName = $True
                                 OverwriteLogFile = $True
                                 WriteToHost = $True
-								MessageFormat = "{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}"
+								MessageFormat = "{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}"
                                 HostTextColor = $_defaultHostTextColor
                             }
 
@@ -227,7 +227,7 @@ Possible field names are:
                             
                     The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
 
-	{CallingObjectName} : The name of the function or script that is writing to the log.  
+	{CallerName} : The name of the function or script that is writing to the log.  
 
                     When determining the caller name all functions in this module will be ignored; 
                     the caller name will be the external function or script that calls into this 
@@ -531,7 +531,7 @@ function Write-LogMessage
 		-ErrorMessage "Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams"
 	
     $Timestamp = Get-Date
-    $CallingObjectName = ""
+    $CallerName = ""
     $LogLevel = $Null
     $Result = "UNKNOWN"
     $TextColor = $Null
@@ -543,9 +543,9 @@ function Write-LogMessage
     }
 
     # Getting the calling object name is an expensive operation so only perform it if needed.
-    if ($messageFormatInfo.FieldsPresent -contains "CallingObjectName")
+    if ($messageFormatInfo.FieldsPresent -contains "CallerName")
     {
-        $CallingObjectName = Private_GetCallingFunctionName
+        $CallerName = Private_GetCallingFunctionName
     }
 
     # Parameter sets mean either $MessageType is supplied or a message type switch, such as 
@@ -905,7 +905,7 @@ A hash table with the following keys:
                             
                             The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff"
 
-			{CallingObjectName} : The name of the function or script that is writing to the log.  
+			{CallerName} : The name of the function or script that is writing to the log.  
 
                             When determining the caller name all functions in this module will be 
                             ignored; the caller name will be the external function or script that 
@@ -932,7 +932,7 @@ A hash table with the following keys:
                             displayed in upper case.
 			
 		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}";
+		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}";
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
@@ -1058,7 +1058,7 @@ A hash table representing all configuration settings.  It must have the followin
                             
                             The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
 
-			{CallingObjectName} : The name of the function or script that is writing to the log.  
+			{CallerName} : The name of the function or script that is writing to the log.  
 
                             When determining the caller name all functions in this module will be 
                             ignored; the caller name will be the external function or script that 
@@ -1085,7 +1085,7 @@ A hash table representing all configuration settings.  It must have the followin
                             displayed in upper case.
 			
 		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallingObjectName} | {MessageType} | {Message}";
+		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}";
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
@@ -1209,7 +1209,7 @@ Possible field names are:
                             
                     The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
 
-	{CallingObjectName} : The name of the function or script that is writing to the log.  
+	{CallerName} : The name of the function or script that is writing to the log.  
 
                     When determining the caller name all functions in this module will be ignored; 
                     the caller name will be the external function or script that calls into this 
@@ -1756,7 +1756,7 @@ Possible field names are:
                             
                     The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
 
-	{CallingObjectName} : The name of the function or script that is writing to the log.  
+	{CallerName} : The name of the function or script that is writing to the log.  
 
                     When determining the caller name all functions in this module will be ignored; 
                     the caller name will be the external function or script that calls into this 
@@ -1950,7 +1950,7 @@ A hash table with the following keys:
                                     format string so will be replaced by 
                                     "$($Timestamp.ToString('yyyy-MM-dd hh:mm:ss.fff'))";
 
-        $CallingObjectName :   Replaces field placeholder {CallingObjectName};
+        $CallerName :   Replaces field placeholder {CallerName};
 
         $LogLevel       :   Replaces field placeholder {LogLevel};
 
@@ -1966,8 +1966,8 @@ A hash table with the following keys:
         "Timestamp"     :   Included if the RawFormat string contains field placeholder 
                             {Timestamp};
 
-        "CallingObjectName" :   Included if the RawFormat string contains field placeholder 
-                            {CallingObjectName};
+        "CallerName" :   Included if the RawFormat string contains field placeholder 
+                            {CallerName};
 
         "LogLevel"      :   Included if the RawFormat string contains field placeholder 
                             {LogLevel};
@@ -2018,10 +2018,10 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*CallingObjectName\s*}', '${CallingObjectName}'
+    $modifiedText = $workingFormat -ireplace '{\s*CallerName\s*}', '${CallerName}'
     if ($modifiedText -ne $workingFormat)
     {
-        $messageFormatInfo.FieldsPresent += "CallingObjectName"
+        $messageFormatInfo.FieldsPresent += "CallerName"
         $workingFormat = $modifiedText
     }
 
