@@ -1,4 +1,4 @@
-ï»¿<#
+<#
 .SYNOPSIS
 Functions for logging messages to the host or to PowerShell streams and, optionally, to a log file.
 
@@ -8,44 +8,13 @@ the Information stream.  In addition, messages may optionally be logged to a log
 
 Messages are logged using the Write-LogMessage function.
 
-The logging configuration is flexible and powerful, allowing the following properties of log 
-messages to be changed:
+The logger may be configured prior to logging any messages via function Set-LogConfiguration.  
+For example, the logger may be configured to write to the PowerShell host, or to PowerShell 
+streams such as the Error stream or the Verbose stream.
 
-    1) The log level:  This determines whether a log message will be logged or not.  
-        
-        Possible log levels, in order from lowest to highest, are:
-            "Off"
-            "Error"
-            "Warning"
-            "Information"
-            "Debug"
-            "Verbose" 
-
-        Only log messages at a level the same as or lower than the LogLevel will be logged.  For 
-        example, if the LogLevel is "Information" then only log messages at a level of 
-        Information, Warning or Error will be logged.  Messages at a level of Debug or Verbose 
-        will not be logged, as these log levels are higher than Information;
-
-    2) The message destination:  Messages may be written to the host or to PowerShell streams such 
-        as the Information stream or the Verbose stream.  In addition, if a log file name is 
-        set in the logging configuration, the messages will be written to a log file;
-
-    3) The host text color:  Messages written to the host, as opposed to PowerShell streams, may 
-        be written in any PowerShell console color.  Different colors may be specified for 
-        different message types, such as Error, Warning or Information;
-
-    4) The message format:  In addition to the specified message, the text written to the log may 
-        include additional fields that are automatically populated, such as a timestamp or the  
-        name of the function writing to the log.  The format of the logged text, including the 
-        fields to be displayed, may be specified in the logging configuration.
-
-The logging configuration may be altered via function Set-LogConfiguration.  Function 
-Get-LogConfiguration will return a copy of the current configuration as a hash table.  The 
-configuration can be reset back to its default values via function Reset-LogConfiguration.
-
-Several configuration settings can be overridden when writing a single log message.  The changes 
-apply only to that one message; subsequent messages will return to using the settings in the 
-logging configuration.
+Function Get-LogConfiguration will return a copy of the current logger configuration as a hash 
+table.  The configuration can be reset back to its default values via function 
+Reset-LogConfiguration.
 
 .NOTES
 
@@ -60,40 +29,35 @@ $_logLevels = @{
                     Verbose = 5
                 }
 
-# Message types need the same values as log levels for the keys they have in common.
-$_messageTypes = @{
-                    Error = 1
-                    Warning = 2
-                    Information = 3
-                    Debug = 4
-                    Verbose = 5
-                    Success = 6
-                    Failure = 7
-                    PartialFailure = 8
-                }
-
 $_defaultHostTextColor = @{
                                 Error = "Red"
                                 Warning = "Yellow"
                                 Information = "Cyan"
                                 Debug = "White"
                                 Verbose = "White"
-                                Success = "Green"
-                                Failure = "Red"
-                                PartialFailure = "Yellow"
                             }
+
+$_defaultCategory = @{
+                        Progress = @{ IsDefault = $True }
+                        Success = @{ Color = 'Green' }
+                        Failure = @{ Color = 'Red' }
+                        PartialFailure = @{ Color = 'Yellow' }
+                    }
 
 $_defaultLogConfiguration = @{   
-                                LogLevel = "Debug"
-                                LogFileName = "Results.log"
-                                IncludeDateInFileName = $True
-                                OverwriteLogFile = $True
+                                LogLevel = 'Debug'
+								MessageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}'
                                 WriteToHost = $True
-								MessageFormat = "{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}"
                                 HostTextColor = $_defaultHostTextColor
+                                LogFile = @{
+                                                Name = 'Results.log'
+                                                IncludeDateInFileName = $True
+                                                Overwrite = $True
+                                            }
+                                Category = $_defaultCategory
                             }
 
-$_defaultTimestampFormat = "yyyy-MM-dd hh:mm:ss.fff"	
+$_defaultTimestampFormat = 'yyyy-MM-dd hh:mm:ss.fff'	
 						
 $_logConfiguration = @{}
 $_messageFormatInfo = @{}
@@ -125,58 +89,51 @@ Verbose stream, depending on the logging configuration.  In addition the message
 a log file, once again depending on the logging configuration.
 
 .NOTES
-The logging configuration is flexible and powerful, allowing the following properties of log 
-messages to be changed:
+The Prog logger can be configured via function Set-LogConfiguration with settings that persist 
+between messages.  For example, it can be configured to write to the PowerShell host, or to 
+PowerShell streams such as the Error stream or the Verbose stream.
 
-    1) The log level:  This determines whether a log message will be logged or not.  
+The most important configuration setting is the LogLevel.  This determines which messages will be 
+logged and which will not.  
+
+Possible LogLevels, in order from lowest to highest, are:
+    OFF
+    ERROR
+    WARNING
+    INFORMATION
+    DEBUG
+    VERBOSE
         
-        Possible log levels, in order from lowest to highest, are:
-            "Off"
-            "Error"
-            "Warning"
-            "Information"
-            "Debug"
-            "Verbose" 
+Each message to be logged has a Message Level.  This may be set explicitly when calling 
+Write-LogMessage or the default value of INFORMATION may be used.  The Message Level is compared 
+to the LogLevel in the logger configuration.  Only messages with a Message Level the same as or 
+lower than the configured LogLevel will be logged.  
 
-        Only log messages at a level the same as or lower than the LogLevel will be logged.  For 
-        example, if the LogLevel is "Information" then only log messages at a level of 
-        Information, Warning or Error will be logged.  Messages at a level of Debug or Verbose 
-        will not be logged, as these log levels are higher than Information;
+For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
+INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
+VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
-    2) The message destination:  Messages may be written to the host or to PowerShell streams such 
-        as the Information stream or the Verbose stream.  In addition, if a log file name is 
-        set in the logging configuration, the messages will be written to a log file;
+When calling Write-LogMessage the Message Level can be set in two different ways:
 
-    3) The host text color:  Messages written to the host, as opposed to PowerShell streams, may 
-        be written in any PowerShell console color.  Different colors may be specified for 
-        different message types, such as Error, Warning or Information;
+    1) Via parameter -MessageLevel:  The Message Level is specified as text, for example:
 
-    4) The message format:  In addition to the specified message, the text written to the log may 
-        include additional fields that are automatically populated, such as a timestamp or the  
-        name of the function writing to the log.  The format of the logged text, including the 
-        fields to be displayed, may be specified in the logging configuration;
+        Write-LogMessage 'Hello world' -MessageLevel 'VERBOSE'
 
-    5) Whether an existing log file will be overwritten or appended to:  If a log file is 
-        specified in the configuration you can determine whether new log messages will overwrite 
-        an existing log file with the same file name or will be appended to the end of it.  If 
-        the option to overwrite an existing file is chosen it will only be overwritten by the 
-        first message written to the log in a given session.  Subsequent messages written in the 
-        same session will be appended to the log file.
+    2) Via Message Level switch parameters:  There are switch parameters for each possible 
+        Message Level: -IsError, -IsWarning, -IsInformation, -IsDebug and -IsVerbose.  For 
+        example:
 
-The logging configuration may be altered via function Set-LogConfiguration.  Function 
-Get-LogConfiguration will return a copy of the current configuration as a hash table.  The 
-configuration can be reset back to its default values via function Reset-LogConfiguration.
+        Write-LogMessage 'Hello world' -IsVerbose
 
-For more details on the log configuration and how to set it view the help topics for 
-Get-LogConfiguration and Set-LogConfiguration.
+        Only one Message Level switch may be set for a given message.  
 
-Several configuration settings can be overridden when writing a single log message.  The changes 
-apply only to that one message; subsequent messages will return to using the settings in the 
-logging configuration.  Settings that can be overridden on a per-message basis are:
+Several configuration settings can be overridden for a single log message.  The changes apply 
+only to that one message; subsequent messages will return to using the settings in the logger  
+configuration.  Settings that can be overridden on a per-message basis are:
 
     1) The message destination:  The message can be logged to a different destination from the 
-        one specified in the logging configuration by using the switch parameters 
-        -WriteToHost or -WriteToStreams;
+        one specified in the logger configuration by using the switch parameters -WriteToHost or 
+        -WriteToStreams;
 
     2) The host text color:  If the message is being written to the host, as opposed to 
         PowerShell streams, its text color can be set via parameter -HostTextColor.  Any 
@@ -188,13 +145,13 @@ logging configuration.  Settings that can be overridden on a per-message basis a
 The message to be logged. 
 
 .PARAMETER HostTextColor
-The name of the text color if the message is to be written to the host.  
+The ForegroundColor the message will be written in, if the message is written to the host.
 
-This is only used if the message is going to be written to the host.  If the message is to be 
-written to a PowerShell stream, such as the Information stream, this color is ignored.
+If the message is written to a PowerShell stream, such as the Information stream, this color is 
+ignored.
 
-Acceptable values are: "Black", "DarkBlue", "DarkGreen", "DarkCyan", "DarkRed", "DarkMagenta", 
-"DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", "Red", "Magenta", "Yellow", "White".
+Acceptable values are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed', 'DarkMagenta', 
+'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 'Red', 'Magenta', 'Yellow', 'White'.
 
 .PARAMETER MessageFormat: 
 A string that sets the format of the text that will be logged.  
@@ -206,15 +163,17 @@ Any other text, not enclosed in curly braces, will be treated as a string litera
 in the logged text exactly as specified.	
 		
 Leading spaces in the MessageFormat string will be retained when the text is written to the 
-log to allow log messages to be indented.  Trailing spaces in the MessageFormat string will not 
-be included in the logged text.
+log to allow log messages to be indented.  Trailing spaces in the MessageFormat string will be 
+removed, and will not be written to the log.
 		
 Possible field names are:
 	{Message}     : The supplied text message to write to the log;
 
-	{Timestamp}	  : The date and time the log message is recorded.  The Timestamp field may 
-					include an optional datetime format string, following the field name and 
-                    separated from it by a colon, ":".  
+	{Timestamp}	  : The date and time the log message is recorded.  
+
+                    The Timestamp field may include an optional datetime format string, inside 
+                    the curly braces, following the field name and separated from it by a 
+                    colon, ':'.  For example, '{Timestamp:T}'.
                             
                     Any .NET datetime format string is valid.  For example, "{Timestamp:d}" will 
                     format the timestamp using the short date pattern, which is "MM/dd/yyyy" in 
@@ -222,12 +181,14 @@ Possible field names are:
                             
                     While the field names in the MessageFormat string are NOT case sentive the 
                     datetime format string IS case sensitive.  This is because .NET datetime 
-                    format strings are case sensitive.  For example "d" is the short date pattern 
-                    while "D" is the long date pattern.  
+                    format strings are case sensitive.  For example, "d" is the short date 
+                    pattern while "D" is the long date pattern.  
                             
-                    The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
+                    The Timestamp field may be specified without any datetime format string.  For 
+                    example, '{Timestamp}'.  In that case the default datetime format string,  
+                    'yyyy-MM-dd hh:mm:ss.fff', will be used;
 
-	{CallerName} : The name of the function or script that is writing to the log.  
+	{CallerName}  : The name of the function or script that is writing to the log.  
 
                     When determining the caller name all functions in this module will be ignored; 
                     the caller name will be the external function or script that calls into this 
@@ -236,236 +197,122 @@ Possible field names are:
                     If a function is writing to the log the function name will be displayed.  If 
                     the log is being written to from a script file, outside any function, the name 
                     of the script file will be displayed.  If the log is being written to manually 
-                    from the Powershell console then "[CONSOLE]" will be displayed.
+                    from the Powershell console then '[CONSOLE]' will be displayed.
 
-	{LogLevel}    : The LogLevel at which the message is being recorded.  For example, the message 
-                    may be an Error message or a Debug message.  The LogLevel will always be 
-                    displayed in upper case.
+	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
+                    message may be an Error message or a Debug message.  The MessageLevel will 
+                    always be displayed in upper case.
 
-	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
-                    The Result will always be displayed in upper case.
+	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
+                    calling Write-LogMessage the default Message Category from the logger 
+                    configuration will be used.
 
-	{MessageType} : The MessageType of the message.  This combines LogLevel and Result: It includes 
-                    the log levels Error, Warning, Information, Debug and Verbose as well as the 
-                    results Success, Failure and PartialFailure.  The MessageType will always be 
-                    displayed in upper case.
+.PARAMETER MessageLevel
+A string that specifies the Message Level of the message.  Possible values are the LogLevels:
+    OFF
+    ERROR
+    WARNING
+    INFORMATION
+    DEBUG
+    VERBOSE
+
+The Message Level is compared to the LogLevel in the logger configuration.  If the Message Level 
+is the same as or lower than the LogLevel the message will be logged.  If the Message Level is 
+higher than the LogLevel the message will not be logged.
+
+For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
+INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
+VERBOSE will not be logged, as those levels are higher than INFORMATION.
+
+-MessageLevel cannot be specified at the same time as one of the Message Level switch parameters: 
+-IsError, -IsWarning, -IsInformation, -IsDebug or -IsVerbose.  Either -MessageLevel can be 
+specified or one or the Message Level switches can be specified but not both.
+
+In addition to determining whether the message will be logged or not, -MessageLevel has the 
+following effects:
+
+    1) If the message is set to be written to a PowerShell stream it determines which stream the 
+        message will be written to: The Error stream, the Warning stream, the Information stream, 
+        the Debug stream or the Verbose stream;
+
+    2) If the message is set to be written to the host and the -HostTextColor parameter is not 
+        specified -MessageLevel determines the ForegroundColor the message will be written in.  
+        The appropriate color is read from the logger configuration HostTextColor hash table.  
+        For example, if the -MessageLevel is ERROR the text ForegroundColor will be set to the 
+        color specified by logger configuration HostTextColor.Error;
+
+    3) The {MessageLevel} placeholder in the MessageFormat string, if present, will be replaced 
+        by the -MessageLevel text.  For example, if -MessageLevel is ERROR the {MessageLevel} 
+        placeholder will be replaced by the text 'ERROR'.
 
 .PARAMETER IsError
-When set this switch parameter has five effects:
+Sets the Message Level to ERROR.  
 
-    1) It specifies the message is being logged at level Error.  The message will not be 
-        logged if the LogLevel is set to Off in the logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Error stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Error, unless parameter 
-        HostTextColor is used to override the HostTextColor.Error setting;
-
-    4) The {LogLevel} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "ERROR";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "ERROR".
-
-IsError is one of the Message Type switch parameters.  Only one Message Type switch may be set 
+-IsError is one of the Message Type switch parameters.  Only one Message Type switch may be set 
 at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
 
 .PARAMETER IsWarning
-When set this switch parameter has five effects:
+Sets the Message Level to WARNING.
 
-    1) It specifies the message is being logged at level Warning.  The message will not be 
-        logged if the LogLevel is set to Off or Error in the logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Warning stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Warning, unless parameter 
-        HostTextColor is used to override the HostTextColor.Warning setting;
-
-    4) The {LogLevel} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "WARNING";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "WARNING".
-
-IsWarning is one of the Message Type switch parameters.  Only one Message Type switch may be set 
+-IsWarning is one of the Message Type switch parameters.  Only one Message Type switch may be set 
 at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
 
 .PARAMETER IsInformation
-When set this switch parameter has five effects:
+Sets the Message Level to INFORMATION.
 
-    1) It specifies the message is being logged at level Information.  The message will not be 
-        logged if the LogLevel is set to Off, Error or Warning in the logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Information stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Information, unless parameter 
-        HostTextColor is used to override the HostTextColor.Information setting;
-
-    4) The {LogLevel} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "INFORMATION";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "INFORMATION".
-
-IsInformation is one of the Message Type switch parameters.  Only one Message Type switch may be 
+-IsInformation is one of the Message Type switch parameters.  Only one Message Type switch may be 
 set at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
 
 .PARAMETER IsDebug
-When set this switch parameter has five effects:
+Sets the Message Level to DEBUG.
 
-    1) It specifies the message is being logged at level Debug.  The message will not be 
-        logged if the LogLevel is set to Off, Error, Warning or Information in the logging 
-        configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Debug stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Debug, unless parameter 
-        HostTextColor is used to override the HostTextColor.Debug setting;
-
-    4) The {LogLevel} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "DEBUG";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "DEBUG".
-
-IsDebug is one of the Message Type switch parameters.  Only one Message Type switch may be set 
+-IsDebug is one of the Message Type switch parameters.  Only one Message Type switch may be set 
 at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
 
 .PARAMETER IsVerbose
-When set this switch parameter has five effects:
+Sets the Message Level to VERBOSE.
 
-    1) It specifies the message is being logged at level Verbose.  The message will not be 
-        logged if the LogLevel is set to Off, Error, Warning, Information or Verbose in the 
-        logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Verbose stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Verbose, unless parameter 
-        HostTextColor is used to override the HostTextColor.Verbose setting;
-
-    4) The {LogLevel} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "VERBOSE";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "VERBOSE".
-
-IsVerbose is one of the Message Type switch parameters.  Only one Message Type switch may be set 
+-IsVerbose is one of the Message Type switch parameters.  Only one Message Type switch may be set 
 at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose
 
-.PARAMETER IsSuccessResult
-When set this switch parameter has five effects:
+.PARAMETER Category
+A string that specifies the Message Category of the message.  Any string can be specified.  
 
-    1) It specifies the message is being logged at level Information.  The message will not be 
-        logged if the LogLevel is set to Off, Error or Warning in the logging configuration;
+If the string matches one of the keys in the logger configuration Category.Color hash table the 
+color specified by that key will be used 
 
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Information stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Success, unless parameter 
-        HostTextColor is used to override the HostTextColor.Success setting;
-
-    4) The {Result} placeholder in the MessageFormat string, if present, will be replaced by the 
-        text "SUCCESS";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "SUCCESS".
-
-IsSuccessResult is one of the Message Type switch parameters.  Only one Message Type switch may 
-be set at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
-
-.PARAMETER IsFailureResult
-When set this switch parameter has five effects:
-
-    1) It specifies the message is being logged at level Information.  The message will not be 
-        logged if the LogLevel is set to Off, Error or Warning in the logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Information stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.Failure, unless parameter 
-        HostTextColor is used to override the HostTextColor.Failure setting;
-
-    4) The {Result} placeholder in the MessageFormat string, if present, will be replaced by the 
-        text "FAILURE";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "FAILURE".
-
-IsFailureResult is one of the Message Type switch parameters.  Only one Message Type switch may 
-be set at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
-
-.PARAMETER IsPartialFailureResult
-When set this switch parameter has five effects:
-
-    1) It specifies the message is being logged at level Information.  The message will not be 
-        logged if the LogLevel is set to Off, Error or Warning in the logging configuration;
-
-    2) If the message is set to be written to a PowerShell stream it will be written to the 
-        Information stream;
-
-    3) If the message is set to be written to the host it will be written using the text 
-        color specified in configuration setting HostTextColor.PartialFailure, unless parameter 
-        HostTextColor is used to override the HostTextColor.PartialFailure setting;
-
-    4) The {Result} placeholder in the MessageFormat string, if present, will be replaced by the 
-        text "PARTIAL FAILURE";
-
-    5) The {MessageType} placeholder in the MessageFormat string, if present, will be replaced by 
-        the text "PARTIAL FAILURE".
-
-IsPartialFailureResult is one of the Message Type switch parameters.  Only one Message Type 
-switch may be set at the same time.  The Message Type switch parameters are:
-    IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-    IsPartialFailureResult.
+If the message will be written to the host and the -HostTextColor parameter is not specified, and 
+the -Category string matches one of the logger configuration Category.Color hash table keys, the 
+test ForegroundColor will be set to the color specified in Category.Color.  For example, if the 
+-Category is 'Success' the text ForegroundColor will be set to the color specified by logger 
+configuration Category.Color.Success;
 
 .PARAMETER WriteToHost
 A switch parameter that, if set, will write the message to the host, as opposed to one of the 
-PowerShell streams such as Error or Warning, overriding the boolean configuration setting 
-OverwriteLogFile, which may be set to $True or $False.
+PowerShell streams such as Error or Warning, overriding the logger configuration setting 
+WriteToHost.
 
-WriteToHost and WriteToStreams cannot both be set at the same time.
+-WriteToHost and -WriteToStreams cannot both be set at the same time.
 
 .PARAMETER WriteToStreams
-A switch parameter that complements WriteToHost.  If set the message will be written to a 
-PowerShell stream.  This overrides the boolean boolean configuration setting OverwriteLogFile, 
-which may be set to $True or $False.
+A switch parameter that complements -WriteToHost.  If set the message will be written to a 
+PowerShell stream.  This overrides the logger configuration setting WriteToHost.
 
-Which PowerShell stream is written to is determined by which Message Type switch parameter is 
-set: IsError, IsWarning, IsInformation, IsDebug, IsVerbose, IsSuccessResult, IsFailureResult, 
-or IsPartialFailureResult.
+Which PowerShell stream is written to is determined by the Message Level, which may be set via 
+the -MessageLevel parameter or by one of the Message Level switch parameters: 
+-IsError, -IsWarning, -IsInformation, -IsDebug or -IsVerbose.
 
-WriteToHost and WriteToStreams cannot both be set at the same time.
+-WriteToHost and -WriteToStreams cannot both be set at the same time.
 
 #>
 function Write-LogMessage     
 {
-    [CmdletBinding(DefaultParameterSetName="MessageTypeText")]
+    [CmdletBinding(DefaultParameterSetName='MessageLevelText')]
     Param
     (
         [Parameter(Mandatory=$False, 
@@ -480,42 +327,32 @@ function Write-LogMessage
         [string]$MessageFormat,      
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeText")]
-        [ValidateSet('ERROR', 'WARNING', 'INFORMATION', 'DEBUG', 'VERBOSE', 
-                    'SUCCESS', 'FAILURE', 'PARTIAL_FAILURE')]
-        [string]$MessageType,
+                     ParameterSetName='MessageLevelText')]
+        [ValidateSet('ERROR', 'WARNING', 'INFORMATION', 'DEBUG', 'VERBOSE')]
+        [string]$MessageLevel,
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
+                     ParameterSetName='MessageLevelSwitches')]
         [switch]$IsError, 
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
+                     ParameterSetName='MessageLevelSwitches')]
         [switch]$IsWarning,
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
+                     ParameterSetName='MessageLevelSwitches')]
         [switch]$IsInformation, 
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
+                     ParameterSetName='MessageLevelSwitches')]
         [switch]$IsDebug, 
 
         [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
+                     ParameterSetName='MessageLevelSwitches')]
         [switch]$IsVerbose, 
 
-        [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
-        [switch]$IsSuccessResult, 
-
-        [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
-        [switch]$IsFailureResult, 
-
-        [Parameter(Mandatory=$False,
-Â                     ParameterSetName="MessageTypeSwitches")]
-        [switch]$IsPartialFailureResult, 
+        [Parameter(Mandatory=$False)]
+        [string]$Category,
 
         [Parameter(Mandatory=$False)]
         [switch]$WriteToHost,      
@@ -524,16 +361,14 @@ function Write-LogMessage
         [switch]$WriteToStreams
     )
 
-    Private_ValidateSwitchParameterGroup -SwitchList $IsError,$IsWarning,$IsInformation,$IsDebug,$IsVerbose,$IsSuccessResult,$IsFailureResult,$IsPartialFailureResult `
-		-ErrorMessage "Only one Message Type switch parameter may be set when calling the function. Message Type switch parameters: -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose, -IsSuccessResult, -IsFailureResult, -IsPartialFailureResult"
+    Private_ValidateSwitchParameterGroup -SwitchList $IsError,$IsWarning,$IsInformation,$IsDebug,$IsVerbose `
+		-ErrorMessage 'Only one Message Level switch parameter may be set when calling the function. Message Level switch parameters: -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose'
 
     Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams `
-		-ErrorMessage "Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams"
+		-ErrorMessage 'Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams'
 	
     $Timestamp = Get-Date
-    $CallerName = ""
-    $LogLevel = $Null
-    $Result = "UNKNOWN"
+    $CallerName = ''
     $TextColor = $Null
 
     $messageFormatInfo = $script:_messageFormatInfo
@@ -543,146 +378,48 @@ function Write-LogMessage
     }
 
     # Getting the calling object name is an expensive operation so only perform it if needed.
-    if ($messageFormatInfo.FieldsPresent -contains "CallerName")
+    if ($messageFormatInfo.FieldsPresent -contains 'CallerName')
     {
-        $CallerName = Private_GetCallingFunctionName
+        $CallerName = Private_GetCallerName
     }
 
-    # Parameter sets mean either $MessageType is supplied or a message type switch, such as 
+    # Parameter sets mean either $MessageLevel is supplied or a message level switch, such as 
     # -IsError, but not both.  Of course, they're all optional so none have to be specified, in 
     # which case we set the default values:
 
-    switch ($MessageType)
-    {
-        ERROR	{
-				$LogLevel = "ERROR"
-				$Result = ''
-				$TextColor = $script:_logConfiguration.HostTextColor.Error
-				break
-			}
-        WARNING	{
-				$LogLevel = "WARNING"
-				$Result = ''
-				$TextColor = $script:_logConfiguration.HostTextColor.Warning
-				break
-			}
-        INFORMATION	{
-				$LogLevel = "INFORMATION"
-				$Result = ''
-				$TextColor = $script:_logConfiguration.HostTextColor.Information
-				break
-			}
-        DEBUG	{
-				$LogLevel = "DEBUG"
-				$Result = ''
-				$TextColor = $script:_logConfiguration.HostTextColor.Debug
-				break
-			}
-        VERBOSE	{
-				$LogLevel = "VERBOSE"
-				$Result = ''
-				$TextColor = $script:_logConfiguration.HostTextColor.Verbose
-				break
-			}
-        SUCCESS	{
-				$LogLevel = "INFORMATION"
-				$Result = "SUCCESS"
-				$TextColor = $script:_logConfiguration.HostTextColor.Success
-				break
-			}
-        FAILURE	{
-				$LogLevel = "INFORMATION"
-				$Result = "FAILURE"
-				$TextColor = $script:_logConfiguration.HostTextColor.Failure
-				break
-			}
-        PARTIAL_FAILURE {
-				$LogLevel = "INFORMATION"
-				$Result = "PARTIAL_FAILURE"
-				$TextColor = $script:_logConfiguration.HostTextColor.PartialFailure
-				break
-			}
-    }
-
     if ($IsError.IsPresent)
     {
-        $LogLevel = "ERROR"
-        $Result = ""
-        $MessageType = "ERROR"
-        $TextColor = $script:_logConfiguration.HostTextColor.Error
+        $MessageLevel = 'ERROR'
     }
     elseif ($IsWarning.IsPresent)
     {
-        $LogLevel = "WARNING"
-        $Result = ""
-        $MessageType = "WARNING"
-        $TextColor = $script:_logConfiguration.HostTextColor.Warning
+        $MessageLevel = 'WARNING'
     }
     elseif ($IsInformation.IsPresent)
     {
-        $LogLevel = "INFORMATION"
-        $Result = ""
-        $MessageType = "INFORMATION"
-        $TextColor = $script:_logConfiguration.HostTextColor.Information
+        $MessageLevel = 'INFORMATION'
     }
     elseif ($IsDebug.IsPresent)
     {
-        $LogLevel = "DEBUG"
-        $Result = ""
-        $MessageType = "DEBUG"
-        $TextColor = $script:_logConfiguration.HostTextColor.Debug
+        $MessageLevel = 'DEBUG'
     }
     elseif ($IsVerbose.IsPresent)
     {
-        $LogLevel = "VERBOSE"
-        $Result = ""
-        $MessageType = "VERBOSE"
-        $TextColor = $script:_logConfiguration.HostTextColor.Verbose
-    }
-    elseif ($IsSuccessResult.IsPresent)
-    {
-        $LogLevel = "INFORMATION"
-        $Result = "SUCCESS"
-        $MessageType = "SUCCESS"
-        $TextColor = $script:_logConfiguration.HostTextColor.Success
-    }
-    elseif ($IsFailureResult.IsPresent)
-    {
-        $LogLevel = "INFORMATION"
-        $Result = "FAILURE"
-        $MessageType = "FAILURE"
-        $TextColor = $script:_logConfiguration.HostTextColor.Failure
-    }
-    elseif ($IsPartialFailureResult.IsPresent)
-    {
-        $LogLevel = "INFORMATION"
-        $Result = "PARTIAL_FAILURE"
-        $MessageType = "PARTIAL_FAILURE"
-        $TextColor = $script:_logConfiguration.HostTextColor.PartialFailure
+        $MessageLevel = 'VERBOSE'
     }
 
-    # Defaults.
-    if (-not $MessageType)
+    # Default.
+    if (-not $MessageLevel)
     {
-        $LogLevel = "INFORMATION"
-        $Result = ""
-        $MessageType = "INFORMATION"
-        # For text color default to the current console text color.
-    }
+        $MessageLevel = 'INFORMATION'
+    }    
 
     $configuredLogLevelValue = $script:_logLevels[$script:_logConfiguration.LogLevel]
-    $messageLogLevelValue = $script:_logLevels[$LogLevel]
+    $messageLogLevelValue = $script:_logLevels[$MessageLevel]
     if ($messageLogLevelValue -gt $configuredLogLevelValue)
     {
         return
     }
-
-    if ($HostTextColor)
-    {
-        $TextColor = $HostTextColor
-    }
-
-    $textToLog = $ExecutionContext.InvokeCommand.ExpandString($messageFormatInfo.WorkingFormat)
 
     # Long-winded logic because we want either of the local parameters to override the 
     # configuration setting: If either of the parameters is set ignore the configuration.
@@ -704,8 +441,51 @@ function Write-LogMessage
         $LogTarget = 'Streams'
     }
 
+    $configuredCategories = @{}
+    if ($script:_logConfiguration.ContainsKey('Category'))
+    {
+        $configuredCategories = $script:_logConfiguration.Category
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Category) -and $configuredCategories)
+    {
+        $Category = $configuredCategories.Keys.Where( 
+            { $configuredCategories[$_] -is [hashtable] `
+                -and $configuredCategories[$_].ContainsKey('IsDefault') `
+                -and $configuredCategories[$_]['IsDefault'] -eq $True }, 
+            'First', 1)
+    }
+    if ($Category)
+    {
+        $Category = $Category.Trim()
+    }
+
+    $textToLog = $ExecutionContext.InvokeCommand.ExpandString($messageFormatInfo.WorkingFormat)
+
     if ($LogTarget -eq 'Host')
     {
+        if ($HostTextColor)
+        {
+            $TextColor = $HostTextColor
+        }
+        elseif ($Category -and $configuredCategories `
+            -and $configuredCategories.ContainsKey($Category) `
+            -and $configuredCategories[$Category].ContainsKey('Color'))
+        {
+            $TextColor = $configuredCategories[$Category].Color
+        }
+        else
+        {
+            switch ($MessageLevel)
+            {
+                ERROR	{ $TextColor = $script:_logConfiguration.HostTextColor.Error; break }
+                WARNING	{ $TextColor = $script:_logConfiguration.HostTextColor.Warning; break }
+                INFORMATION	{ $TextColor = $script:_logConfiguration.HostTextColor.Information; break }
+                DEBUG	{ $TextColor = $script:_logConfiguration.HostTextColor.Debug; break }
+                VERBOSE	{ $TextColor = $script:_logConfiguration.HostTextColor.Verbose; break }
+            }
+        }
+
         if ($TextColor)
         {
             Write-Host $textToLog -ForegroundColor $TextColor
@@ -717,21 +497,19 @@ function Write-LogMessage
     }
     elseif ($LogTarget -eq 'Streams')
     {
-        switch ($MessageType)
+        switch ($MessageLevel)
         {
-            "ERROR"             { Write-Error $textToLog; break }
-            "WARNING"           { Write-Warning $textToLog; break }
-            "INFORMATION"       { Write-Information $textToLog; break }
-            "DEBUG"             { Write-Debug $textToLog; break }
-            "VERBOSE"           { Write-Verbose $textToLog; break }
-            "SUCCESS"           { Write-Information $textToLog; break }
-            "FAILURE"           { Write-Information $textToLog; break }
-            "PARTIAL FAILURE"   { Write-Information $textToLog; break }
-            default             { Write-Information $textToLog; break }
+            ERROR           { Write-Error $textToLog; break }
+            WARNING         { Write-Warning $textToLog; break }
+            INFORMATION     { Write-Information $textToLog; break }
+            DEBUG           { Write-Debug $textToLog; break }
+            VERBOSE         { Write-Verbose $textToLog; break }                            
         }
     }
 
-    if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFileName))
+    if (-not $script:_logConfiguration.ContainsKey('LogFile') `
+        -or -not $script:_logConfiguration.LogFile.ContainsKey('Name') `
+        -or [string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
     {
         return
     }
@@ -743,7 +521,12 @@ function Write-LogMessage
         return
     }
 
-    if ($script:_logConfiguration.OverwriteLogFile -and (-not $script:_logFileOverwritten))
+    $overwriteLogFile = $False
+    if ($script:_logConfiguration.LogFile.ContainsKey('Overwrite'))
+    {
+        $overwriteLogFile = $script:_logConfiguration.LogFile.Overwrite
+    }
+    if ($overwriteLogFile -and (-not $script:_logFileOverwritten))
     {
         Set-Content -Path $script:_logFilePath -Value $textToLog
         $script:_logFileOverwritten = $True
@@ -762,12 +545,12 @@ Gets the name of the function calling into this module.
 Walks up the call stack until it finds a stack frame where the ScriptName is not the filename of 
 this module.  
 
-If the call stack cannot be read then the function returns "[UNKNOWN CALLER]".  
+If the call stack cannot be read then the function returns '[UNKNOWN CALLER]'.  
 
 If no stack frame is found with a different ScriptName then the function returns "----".
 
 If the ScriptName of the first stack frame outside of this module is $Null then the module is 
-being called from the PowerShell console.  In that case the function returns "[CONSOLE]".  
+being called from the PowerShell console.  In that case the function returns '[CONSOLE]'.  
 
 If the ScriptName of the first stack frame outside of this module is NOT $Null then the module 
 is being called from a script file.  In that case the function will return the the stack frame 
@@ -782,12 +565,12 @@ extension but not any path information.
 This function is NOT intended to be exported from this module.
 
 #>
-function Private_GetCallingFunctionName()
+function Private_GetCallerName()
 {
 	$callStack = Get-PSCallStack
 	if ($callStack -eq $null -or $callStack.Count -eq 0)
 	{
-		return "[UNKNOWN CALLER]"
+		return '[UNKNOWN CALLER]'
 	}
 	
 	$thisFunctionStackFrame = $callStack[0]
@@ -797,7 +580,7 @@ function Private_GetCallingFunctionName()
     # be at least two stack frames in the call stack as this function will only be called from 
     # another function in this module, so it's safe to skip the first stack frame.
 	$i = 1
-	$stackFrameFunctionName = "----"
+	$stackFrameFunctionName = '----'
 	while ($stackFrameFileName -eq $thisModuleFileName -and $i -lt $callStack.Count)
 	{
 		$stackFrame = $callStack[$i]
@@ -808,9 +591,9 @@ function Private_GetCallingFunctionName()
 	
 	if ($stackFrameFileName -eq $null)
 	{
-		return "[CONSOLE]"
+		return '[CONSOLE]'
 	}
-	if ($stackFrameFunctionName -eq "<ScriptBlock>")
+	if ($stackFrameFunctionName -eq '<ScriptBlock>')
 	{
 		$scriptFileNameWithoutPath = (Split-Path -Path $stackFrameFileName -Leaf)
 		return "Script $scriptFileNameWithoutPath"
@@ -915,24 +698,24 @@ A hash table with the following keys:
                             displayed.  If the log is being written to from a script file, outside 
                             any function, the name of the script file will be displayed.  If the 
                             log is being written to manually from the Powershell console then 
-                            "[CONSOLE]" will be displayed.
+                            '[CONSOLE]' will be displayed.
 
-			{LogLevel}    : The LogLevel at which the message is being recorded.  For example, the 
-                            message may be an Error message or a Debug message.  The LogLevel will 
+			{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the 
+                            message may be an Error message or a Debug message.  The MessageLevel will 
                             always be displayed in upper case.
 
 			{Result}      : Used with result-related message types: Success, Failure and 
                             PartialFailure.  The Result will always be displayed in upper case.
 
-			{MessageType} : The MessageType of the message.  This combines LogLevel and Result: 
+			{Category} : The Category of the message.  This combines LogLevel and Result: 
                             It includes the log levels Error, Warning, Information, Debug and 
                             Verbose as well as the results Success, Failure and PartialFailure.  
                             If does not include the log level Off because in that case the 
-                            message would not be logged.  The MessageType will always be 
+                            message would not be logged.  The Category will always be 
                             displayed in upper case.
 			
 		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}";
+		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}";
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
@@ -1068,24 +851,24 @@ A hash table representing all configuration settings.  It must have the followin
                             displayed.  If the log is being written to from a script file, outside 
                             any function, the name of the script file will be displayed.  If the 
                             log is being written to manually from the Powershell console then 
-                            "[CONSOLE]" will be displayed.
+                            '[CONSOLE]' will be displayed.
 
-			{LogLevel}    : The LogLevel at which the message is being recorded.  For example, the 
-                            message may be an Error message or a Debug message.  The LogLevel will 
+			{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the 
+                            message may be an Error message or a Debug message.  The MessageLevel will 
                             always be displayed in upper case.
 
 			{Result}      : Used with result-related message types: Success, Failure and 
                             PartialFailure.  The Result will always be displayed in upper case.
 
-			{MessageType} : The MessageType of the message.  This combines LogLevel and Result: 
+			{Category} : The Category of the message.  This combines LogLevel and Result: 
                             It includes the log levels Error, Warning, Information, Debug and 
                             Verbose as well as the results Success, Failure and PartialFailure.  
                             If does not include the log level Off because in that case the 
-                            message would not be logged.  The MessageType will always be 
+                            message would not be logged.  The Category will always be 
                             displayed in upper case.
 			
 		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}";
+		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}";
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
@@ -1218,18 +1001,18 @@ Possible field names are:
                     If a function is writing to the log the function name will be displayed.  If 
                     the log is being written to from a script file, outside any function, the name 
                     of the script file will be displayed.  If the log is being written to manually 
-                    from the Powershell console then "[CONSOLE]" will be displayed.
+                    from the Powershell console then '[CONSOLE]' will be displayed.
 
-	{LogLevel}    : The LogLevel at which the message is being recorded.  For example, the message 
-                    may be an Error message or a Debug message.  The LogLevel will always be 
+	{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the message 
+                    may be an Error message or a Debug message.  The MessageLevel will always be 
                     displayed in upper case.
 
 	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
                     The Result will always be displayed in upper case.
 
-	{MessageType} : The MessageType of the message.  This combines LogLevel and Result: It includes 
+	{Category} : The Category of the message.  This combines LogLevel and Result: It includes 
                     the log levels Error, Warning, Information, Debug and Verbose as well as the 
-                    results Success, Failure and PartialFailure.  The MessageType will always be 
+                    results Success, Failure and PartialFailure.  The Category will always be 
                     displayed in upper case.
 
 .PARAMETER HostTextColorConfiguration
@@ -1641,15 +1424,15 @@ function Private_SetLogFilePath ()
 {
     $oldLogFilePath = $script:_logFilePath
 
-    if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFileName))
+    if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
     {
         $script:_logFilePath = ''
         return
     }
 
-    $logFilePath = Private_GetAbsolutePath $script:_logConfiguration.LogFileName
+    $logFilePath = Private_GetAbsolutePath $script:_logConfiguration.LogFile.Name
 
-    if ($script:_logConfiguration.IncludeDateInFileName)
+    if ($script:_logConfiguration.LogFile.IncludeDateInFileName)
     {
         $directory = [System.IO.Path]::GetDirectoryName($logFilePath)
         $fileName = [System.IO.Path]::GetFileNameWithoutExtension($logFilePath)
@@ -1765,18 +1548,17 @@ Possible field names are:
                     If a function is writing to the log the function name will be displayed.  If 
                     the log is being written to from a script file, outside any function, the name 
                     of the script file will be displayed.  If the log is being written to manually 
-                    from the Powershell console then "[CONSOLE]" will be displayed.
+                    from the Powershell console then '[CONSOLE]' will be displayed.
 
-	{LogLevel}    : The LogLevel at which the message is being recorded.  For example, the message 
-                    may be an Error message or a Debug message.  The LogLevel will always be 
+	{MessageLevel}: The log level at which the message is being recorded.  For example, the message 
+                    may be an Error message or a Debug message.  The log level will always be 
                     displayed in upper case.
 
 	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
                     The Result will always be displayed in upper case.
 
-	{MessageType} : The MessageType of the message.  This combines LogLevel and Result: It includes 
-                    the log levels Error, Warning, Information, Debug and Verbose as well as the 
-                    results Success, Failure and PartialFailure.  The MessageType will always be 
+	{Category} : The type of the message.  This allows messages to be categorized so logs 
+                    may be queried.  The Category will always be 
                     displayed in upper case.
 
 .NOTES
@@ -1952,11 +1734,9 @@ A hash table with the following keys:
 
         $CallerName :   Replaces field placeholder {CallerName};
 
-        $LogLevel       :   Replaces field placeholder {LogLevel};
+        $MessageLevel   :   Replaces field placeholder {MessageLevel};
 
-        $Result         :   Replaces field placeholder {Result};
-
-        $MessageType    :   Replaces field placeholder {MessageType};
+        $Category    :   Replaces field placeholder {Category};
         
     FieldsPresent: An array of strings representing the names of fields that will appear in the 
         log message.  Field names that may appear in the array are:
@@ -1969,14 +1749,11 @@ A hash table with the following keys:
         "CallerName" :   Included if the RawFormat string contains field placeholder 
                             {CallerName};
 
-        "LogLevel"      :   Included if the RawFormat string contains field placeholder 
-                            {LogLevel};
+        "MessageLevel"  :   Included if the RawFormat string contains field placeholder 
+                            {MessageLevel};
 
-        "Result"        :   Included if the RawFormat string contains field placeholder 
-                            {Result};
-
-        "MessageType"   :   Included if the RawFormat string contains field placeholder 
-                            {MessageType}.
+        "Category"   :   Included if the RawFormat string contains field placeholder 
+                            {Category}.
 
 .NOTES
 This function is NOT intended to be exported from this module.
@@ -2025,24 +1802,17 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*LogLevel\s*}', '${LogLevel}'
+    $modifiedText = $workingFormat -ireplace '{\s*MessageLevel\s*}', '${MessageLevel}'
     if ($modifiedText -ne $workingFormat)
     {
-        $messageFormatInfo.FieldsPresent += "LogLevel"
+        $messageFormatInfo.FieldsPresent += "MessageLevel"
         $workingFormat = $modifiedText
     }
 
-    $modifiedText = $workingFormat -ireplace '{\s*Result\s*}', '${Result}'
+    $modifiedText = $workingFormat -ireplace '{\s*Category\s*}', '${Category}'
     if ($modifiedText -ne $workingFormat)
     {
-        $messageFormatInfo.FieldsPresent += "Result"
-        $workingFormat = $modifiedText
-    }
-
-    $modifiedText = $workingFormat -ireplace '{\s*MessageType\s*}', '${MessageType}'
-    if ($modifiedText -ne $workingFormat)
-    {
-        $messageFormatInfo.FieldsPresent += "MessageType"
+        $messageFormatInfo.FieldsPresent += "Category"
         $workingFormat = $modifiedText
     }
 
