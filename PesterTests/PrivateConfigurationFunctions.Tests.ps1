@@ -92,14 +92,14 @@ InModuleScope Prog {
             $fileNameFromConfiguration = GetFileNameFromTemplate -FileNameTemplate $NewFileNameTemplate
 
             $script:_logFilePath = $ExistingFileName
-            $script:_logConfiguration.LogFileName = $fileNameFromConfiguration
-            $script:_logConfiguration.IncludeDateInFileName = $IncludeDateInFileName
+            $script:_logConfiguration.LogFile.Name = $fileNameFromConfiguration
+            $script:_logConfiguration.LogFile.IncludeDateInFileName = $IncludeDateInFileName
             $script:_logFileOverwritten = $True
 
             Private_SetLogFilePath
         }
 
-        It 'sets $script:_logFilePath to log file name from configuration' {
+        It 'sets $script:_logFilePath to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate
@@ -110,7 +110,7 @@ InModuleScope Prog {
             $script:_logFilePath | Should -Be $expectedFileName
         }     
 
-        It 'adds date to $script:_logFilePath if IncludeDateInFileName configuration value is set' {
+        It 'adds date to $script:_logFilePath if LogFile.IncludeDateInFileName configuration value is set' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate `
@@ -122,7 +122,7 @@ InModuleScope Prog {
             $script:_logFilePath | Should -Be $expectedFileName
         }
 
-        It 'leaves $script:_logFilePath unchanged if identical to log file name from configuration' {
+        It 'leaves $script:_logFilePath unchanged if identical to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\Original\old.log'
             $expectedFileName = $existingFileName

@@ -1412,8 +1412,8 @@ Determines whether the LogFile.Name specified in the configuration settings is a
 relative path.  If it is relative then the path to the directory the calling script is running 
 in will be prepended to the specified LogFile.Name.
 
-If configuration setting LogFile.Overwrite is $True then the date will be included in the log 
-file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For example, 
+If configuration setting LogFile.IncludeDateInFileName is $True then the date will be included in 
+the log file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For example, 
 "Results_20171129.log".
 
 .NOTES
