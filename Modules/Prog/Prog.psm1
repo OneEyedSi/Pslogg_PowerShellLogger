@@ -1719,16 +1719,16 @@ A hash table with the following keys:
                             
         $Timestamp      :   Unlike other fields, Timestamp must include a datetime format string.  
                             If no datetime format string is included in the Timestamp placeholder 
-                            it will default to "yyyy-MM-dd hh:mm:ss.fff".  
+                            it will default to 'yyyy-MM-dd hh:mm:ss.fff'.  
                             
                             The Timestamp placeholder will be replaced with 
                             "$($Timestamp.ToString('<datetime format string>'))".  
                             
                             Examples:
-                                1)  Field placeholder "{Timestamp:d}" will be replaced by 
+                                1)  Field placeholder '{Timestamp:d}' will be replaced by 
                                     "$($Timestamp.ToString('d'))";
 
-                                2) Field placeholder "{Timestamp}" will use the default datetime 
+                                2) Field placeholder '{Timestamp}' will use the default datetime 
                                     format string so will be replaced by 
                                     "$($Timestamp.ToString('yyyy-MM-dd hh:mm:ss.fff'))";
 

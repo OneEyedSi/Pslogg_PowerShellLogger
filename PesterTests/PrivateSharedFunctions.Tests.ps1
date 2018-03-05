@@ -317,16 +317,12 @@ InModuleScope Prog {
             TestWorkingFormatFieldSurroundedBySpaces -FieldName CallerName
         }
 
-        It 'replaces {LogLevel} placeholder with "${LogLevel}" in WorkingFormat' {
-            TestWorkingFormatFieldSurroundedBySpaces -FieldName LogLevel
+        It 'replaces {MessageLevel} placeholder with "${MessageLevel}" in WorkingFormat' {
+            TestWorkingFormatFieldSurroundedBySpaces -FieldName MessageLevel
         }
 
-        It 'replaces {Result} placeholder with "${Result}" in WorkingFormat' {
-            TestWorkingFormatFieldSurroundedBySpaces -FieldName Result
-        }
-
-        It 'replaces {MessageType} placeholder with "${MessageType}" in WorkingFormat' {
-            TestWorkingFormatFieldSurroundedBySpaces -FieldName MessageType
+        It 'replaces {Category} placeholder with "${Category}" in WorkingFormat' {
+            TestWorkingFormatFieldSurroundedBySpaces -FieldName Category
         }
 
         It 'replaces {TimeStamp} placeholder with "`$(`$Timestamp.ToString(<timestamp format>))" in WorkingFormat' {
@@ -351,8 +347,8 @@ InModuleScope Prog {
         }
 
         It 'replaces all other placeholders that follow a {TimeStamp} placeholder correctly' {
-            $messageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}'
-            $workingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageType} | ${Message}'
+            $messageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}'
+            $workingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${Category} | ${Message}'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
@@ -375,8 +371,8 @@ InModuleScope Prog {
         }
 
         It 'replaces multiple placeholders in WorkingFormat' {
-            $messageFormat = 'xxx {LogLevel} {CallerName} {Message} xxx'
-            $workingFormat = 'xxx ${LogLevel} ${CallerName} ${Message} xxx'
+            $messageFormat = 'xxx {MessageLevel} {CallerName} {Message} xxx'
+            $workingFormat = 'xxx ${MessageLevel} ${CallerName} ${Message} xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
@@ -399,16 +395,15 @@ InModuleScope Prog {
 
         TestFieldsPresent "Message"
         TestFieldsPresent "CallerName"
-        TestFieldsPresent "LogLevel"
-        TestFieldsPresent "Result"
-        TestFieldsPresent "MessageType"
+        TestFieldsPresent "MessageLevel"
+        TestFieldsPresent "Category"
         TestFieldsPresent "Timestamp"
 
         It 'adds multiple field names to FieldsPresent if multiple placeholders in message format text' {
-            $messageFormat = 'xxx {LogLevel} {CallerName} {Message} xxx'
+            $messageFormat = 'xxx {MessageLevel} {CallerName} {Message} xxx'
             $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
             $hashTable.FieldsPresent.Count | Should -Be 3
-            $hashTable.FieldsPresent.Contains("LogLevel")
+            $hashTable.FieldsPresent.Contains("MessageLevel")
             $hashTable.FieldsPresent.Contains("CallerName")
             $hashTable.FieldsPresent.Contains("Message")
         }
