@@ -267,7 +267,7 @@ InModuleScope Prog {
     Describe "SetMessageFormat" {     
 
         It 'sets LogConfiguration.MessageFormat equal to the specified string' {
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             $originalMessageFormat = $script:_logConfiguration.MessageFormat
             Private_SetMessageFormat -MessageFormat $newMessageFormat 
             $script:_logConfiguration.MessageFormat | Should -Be $newMessageFormat
@@ -276,7 +276,7 @@ InModuleScope Prog {
 
         It 'sets MessageFormatInfo to be a hashtable' {
             $script:_messageFormatInfo = $Null
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
             $script:_messageFormatInfo | Should -BeOfType [Hashtable]
         }    
@@ -285,7 +285,7 @@ InModuleScope Prog {
         {
             It "creates element '$key' in MessageFormatInfo hashtable" {
                 $script:_messageFormatInfo = $Null
-                $newMessageFormat = '{LogLevel}: {Message}'
+                $newMessageFormat = '{MessageLevel}: {Message}'
                 Private_SetMessageFormat -MessageFormat $newMessageFormat
                 $script:_messageFormatInfo.ContainsKey($key) | Should -Be $True
             }  
@@ -297,31 +297,31 @@ InModuleScope Prog {
 
         It 'sets MessageFormatInfo.RawFormat equal to the specified string' {
             $script:_messageFormatInfo = $Null
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
             $script:_messageFormatInfo.RawFormat | Should -Be $newMessageFormat
         }
 
         It 'sets MessageFormatInfo.WorkingFormat equal to the specified string with placeholders replaced by variable names' {
             $script:_messageFormatInfo = $Null
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
-            $script:_messageFormatInfo.WorkingFormat | Should -Be '${LogLevel}: ${Message}'
+            $script:_messageFormatInfo.WorkingFormat | Should -Be '${MessageLevel}: ${Message}'
         }
 
         It 'sets MessageFormatInfo.FieldsPresent to be an array' {
             $script:_messageFormatInfo = $Null
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
             $script:_messageFormatInfo.FieldsPresent.GetType().FullName | Should -Be "System.Object[]"
         }
 
         It 'adds placeholder names from specified string to MessageFormatInfo.FieldsPresent' {
             $script:_messageFormatInfo = $Null
-            $newMessageFormat = '{LogLevel}: {Message}'
+            $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
-            $script:_messageFormatInfo.FieldsPresent.Contains("LogLevel") | Should -Be $True 
-            $script:_messageFormatInfo.FieldsPresent.Contains("Message") | Should -Be $True
+            $script:_messageFormatInfo.FieldsPresent.Contains('MessageLevel') | Should -Be $True 
+            $script:_messageFormatInfo.FieldsPresent.Contains('Message') | Should -Be $True
         }
     }
 

@@ -1408,13 +1408,13 @@ Sets the full path to the log file.
 Sets module variable $_logFilePath.  If $_logFilePath has changed then $_logFileOverwritten 
 will be cleared.
 
-Determines whether the LogFileName specified in the configuration settings is an absolute or a 
+Determines whether the LogFile.Name specified in the configuration settings is an absolute or a 
 relative path.  If it is relative then the path to the directory the calling script is running 
-in will be prepended to the specified LogFileName.
+in will be prepended to the specified LogFile.Name.
 
-If configuration setting OverwriteLogFile is $True then the date will be included in the log 
+If configuration setting LogFile.Overwrite is $True then the date will be included in the log 
 file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For example, 
-"Script_20171129.log".
+"Results_20171129.log".
 
 .NOTES
 This function is NOT intended to be exported from this module.
@@ -1511,22 +1511,24 @@ Sets the message format in the log configuration settings.
 .PARAMETER MessageFormat: 
 A string that sets the format of log messages.  
 
-Text enclosed in curly braces, {...}, represents the name of a field which will be included in the 
-logged message.  The field names are not case sensitive.  
+Text enclosed in curly braces, {...}, represents the name of a field which will be included in 
+the logged text.  The field names are not case sensitive.  
         
 Any other text, not enclosed in curly braces, will be treated as a string literal and will appear 
-in the logged message exactly as specified.	
+in the logged text exactly as specified.	
 		
-Leading spaces in the MessageFormat string will be retained when the message is written to the 
-logs to allow log messages to be indented.  Trailing spaces in the MessageFormat string will not 
-be included in the logged messages.
+Leading spaces in the MessageFormat string will be retained when the text is written to the 
+log to allow log messages to be indented.  Trailing spaces in the MessageFormat string will be 
+removed, and will not be written to the log.
 		
 Possible field names are:
 	{Message}     : The supplied text message to write to the log;
 
-	{Timestamp}	  : The date and time the log message is recorded.  The Timestamp field may 
-					include an optional datetime format string, following the field name and 
-                    separated from it by a colon, ":".  
+	{Timestamp}	  : The date and time the log message is recorded.  
+
+                    The Timestamp field may include an optional datetime format string, inside 
+                    the curly braces, following the field name and separated from it by a 
+                    colon, ':'.  For example, '{Timestamp:T}'.
                             
                     Any .NET datetime format string is valid.  For example, "{Timestamp:d}" will 
                     format the timestamp using the short date pattern, which is "MM/dd/yyyy" in 
@@ -1534,12 +1536,14 @@ Possible field names are:
                             
                     While the field names in the MessageFormat string are NOT case sentive the 
                     datetime format string IS case sensitive.  This is because .NET datetime 
-                    format strings are case sensitive.  For example "d" is the short date pattern 
-                    while "D" is the long date pattern.  
+                    format strings are case sensitive.  For example, "d" is the short date 
+                    pattern while "D" is the long date pattern.  
                             
-                    The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
+                    The Timestamp field may be specified without any datetime format string.  For 
+                    example, '{Timestamp}'.  In that case the default datetime format string,  
+                    'yyyy-MM-dd hh:mm:ss.fff', will be used;
 
-	{CallerName} : The name of the function or script that is writing to the log.  
+	{CallerName}  : The name of the function or script that is writing to the log.  
 
                     When determining the caller name all functions in this module will be ignored; 
                     the caller name will be the external function or script that calls into this 
@@ -1550,16 +1554,13 @@ Possible field names are:
                     of the script file will be displayed.  If the log is being written to manually 
                     from the Powershell console then '[CONSOLE]' will be displayed.
 
-	{MessageLevel}: The log level at which the message is being recorded.  For example, the message 
-                    may be an Error message or a Debug message.  The log level will always be 
-                    displayed in upper case.
+	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
+                    message may be an Error message or a Debug message.  The MessageLevel will 
+                    always be displayed in upper case.
 
-	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
-                    The Result will always be displayed in upper case.
-
-	{Category} : The type of the message.  This allows messages to be categorized so logs 
-                    may be queried.  The Category will always be 
-                    displayed in upper case.
+	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
+                    calling Write-LogMessage the default Message Category from the logger 
+                    configuration will be used.
 
 .NOTES
 This function is NOT intended to be exported from this module.
@@ -1575,7 +1576,7 @@ function Private_SetMessageFormat([string]$MessageFormat)
 .SYNOPSIS
 Sets one of the host text color values in the log configuration settings.
 
-.DESCRIPTION
+.DESCRIPTIONs
 Sets one of the host text color values in the log configuration settings.
 
 .NOTES
@@ -1633,7 +1634,7 @@ passed as a parameter.
 
 .DESCRIPTION
 If the specified color name is valid this function returns $True.  If the specified color name 
-is not valid the function throws an exception rather than returns $False.  
+is not valid the function throws an exception rather than returning $False.  
 
 .NOTES        
 Allows multiple parameters to be validated in a single place, so the validation code does not 
@@ -1685,7 +1686,7 @@ function Private_GetTimestampFormat ([string]$MessageFormat)
     #    $Matches[1]    : The datetime format string.  Only present if the {Timestamp} 
     #                       placeholder has a datetime format string.
     # Note the first colon in the regex pattern is part of the non-capturing group specifier.  
-    # The second colon in the regex pattern represents the separator between the placholder name 
+    # The second colon in the regex pattern represents the separator between the placeholder name 
     # and the datetime format string, eg {Timestamp:d}
     $regexPattern = "{\s*Timestamp\s*(?::\s*(.+?)\s*)?\s*}"
 	
