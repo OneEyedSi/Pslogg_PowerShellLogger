@@ -27,9 +27,13 @@ Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Forc
 
 InModuleScope Prog {
 
+    # Need to dot source the helper file within the InModuleScope block to be able to use its 
+    # functions within a test.
+    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+
     Describe "ValidateSwitchParameterGroup" {
     
-        It 'throws ParameterBindingValidationException if no switches supplied' {
+        It 'throws ParameterBindingValidationException when no switches supplied' {
             [switch[]]$switchList = @()
             try
             {
@@ -41,7 +45,7 @@ InModuleScope Prog {
             }            
         }
     
-        It 'throws ParameterBindingValidationException if no error message supplied' {
+        It 'throws ParameterBindingValidationException when no error message supplied' {
             [switch]$firstSwitch = $True
             [switch[]]$switchList = @($firstSwitch)
             try
@@ -54,14 +58,14 @@ InModuleScope Prog {
             }            
         }
 
-        It 'does not throw if one switch defined and not set' {
+        It 'does not throw when one switch defined and not set' {
             [switch]$firstSwitch = $True
             [switch[]]$switchList = @($firstSwitch)
             { Private_ValidateSwitchParameterGroup -SwitchList $switchList -ErrorMessage "Should not throw" } | 
                 Should -Not -Throw
         }
 
-        It 'does not throw if one switch defined and is set' {
+        It 'does not throw when one switch defined and is set' {
             [switch]$firstSwitch = $True
             [switch[]]$switchList = @($firstSwitch)
             { Private_ValidateSwitchParameterGroup -SwitchList $switchList -ErrorMessage "Should not throw" } | 
@@ -124,59 +128,97 @@ InModuleScope Prog {
 
     Describe "ValidateHostColor" {
 
-        It 'does not throw if color name is valid' {
+        It 'does not throw when color name is valid' {
             [string]$colourName = 'Yellow'
             { Private_ValidateHostColor -ColorToTest $colourName } | Should -Not -Throw
         }
 
-        It 'returns $True if color name is valid' {
+        It 'returns $True when color name is valid' {
             [string]$colourName = 'Yellow'
             $result = Private_ValidateHostColor -ColorToTest $colourName
             $result | Should -Be $True
         }
 
-        It 'throws ArgumentException if color name is invalid' {
+        It 'throws ArgumentException when color name is invalid' {
             [string]$colourName = 'Turquoise'
-            $exception = $Null
-            try
-            {
-                Private_ValidateHostColor -ColorToTest $colourName
-            }
-            catch
-            {
-                $exception = $_.Exception
-            }
-            $exception | Should -BeOfType [ArgumentException]
+            
+            { Private_ValidateHostColor -ColorToTest $colourName} | 
+                Assert-ExceptionThrown -WithTypeName ArgumentException
         }
 
-        It 'exception error message includes "INVALID TEXT COLOR ERROR: $colourName" if color name is invalid' {
+        It 'exception error message includes "INVALID TEXT COLOR ERROR: $colourName" when color name is invalid' {
             [string]$colourName = 'Turquoise'
-            $exception = $Null
-            try
-            {
-                Private_ValidateHostColor -ColorToTest $colourName
-            }
-            catch
-            {
-                $exception = $_.Exception
-            }
-            $exception.Message | Should -BeLike "INVALID TEXT COLOR ERROR: '$colourName'*"
+            
+            { Private_ValidateHostColor -ColorToTest $colourName} | 
+                Assert-ExceptionThrown -WithMessage "INVALID TEXT COLOR ERROR: '$colourName'"
+        }
+    }
+
+    Describe "ValidateLogLevel" {
+
+        It 'does not throw when log level is valid' {
+            [string]$logLevel = 'ERROR'
+
+            { Private_ValidateLogLevel -LevelToTest $logLevel } | Should -Not -Throw
+        }
+
+        It 'returns $True when log level is valid' {
+            [string]$logLevel = 'ERROR'
+
+            $result = Private_ValidateLogLevel -LevelToTest $logLevel
+
+            $result | Should -Be $True
+        }
+
+        It 'throws ArgumentException when log level is invalid' {
+            [string]$logLevel = 'INVALID'
+
+            { Private_ValidateLogLevel -LevelToTest $logLevel } | 
+                Assert-ExceptionThrown -WithTypeName ArgumentException
+        }
+
+        It 'exception error message includes "INVALID LOG LEVEL ERROR: $logLevel" when log level is invalid' {
+            [string]$logLevel = 'INVALID'
+            
+             { Private_ValidateLogLevel -LevelToTest $logLevel } | 
+                Assert-ExceptionThrown -WithMessage "INVALID LOG LEVEL ERROR: '$logLevel'"
+        }
+
+        It 'throws ArgumentException when log level is OFF and -ExcludeOffLevel switch is set' {
+            [string]$logLevel = 'OFF'
+
+            { Private_ValidateLogLevel -LevelToTest $logLevel -ExcludeOffLevel } | 
+                Assert-ExceptionThrown -WithTypeName ArgumentException
+        }
+
+        It 'does not throw when log level is OFF and -ExcludeOffLevel switch is not set' {
+            [string]$logLevel = 'OFF'
+
+            { Private_ValidateLogLevel -LevelToTest $logLevel } | Should -Not -Throw
+        }
+
+        It 'returns $True when log level is OFF and -ExcludeOffLevel switch is not set' {
+            [string]$logLevel = 'OFF'
+
+            $result = Private_ValidateLogLevel -LevelToTest $logLevel
+
+            $result | Should -Be $True
         }
     }
 
     Describe "GetTimestampFormat" {
 
-        It 'returns $Null if not a Timestamp placeholder' {
+        It 'returns $Null when not a Timestamp placeholder' {
             [string]$textToSearch = 'xxx {other} xxx'
             Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be $Null
         }
 
-        It 'returns $Null if Timestamp placeholder without format string' {
+        It 'returns $Null when Timestamp placeholder without format string' {
             [string]$textToSearch = 'xxx {Timestamp} xxx'
             Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be $Null
         }
 
-        It 'returns $Null if Timestamp placeholder is missing colon' {
+        It 'returns $Null when Timestamp placeholder is missing colon' {
             [string]$textToSearch = 'xxx {Timestamp yyyy-MM-dd hh:mm:ss} xxx'
             Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be $Null
         }
@@ -269,7 +311,7 @@ InModuleScope Prog {
             $hashTable.RawFormat | Should -BeExactly $messageFormat
         }
 
-        It 'WorkingFormat is a copy of original message format text if it contains no field placeholders' {
+        It 'WorkingFormat is a copy of original message format text when it contains no field placeholders' {
             $messageFormat = 'xxx xxx'
             $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
             $hashTable.WorkingFormat | Should -BeExactly $messageFormat
@@ -332,14 +374,14 @@ InModuleScope Prog {
                 -DoRegexMatch
         }
 
-        It 'uses default <timestamp format> in WorkingFormat if none specified' {
+        It 'uses default <timestamp format> in WorkingFormat when none specified' {
             $messageFormat = 'xxx {Timestamp} xxx'
             $workingFormat = 'xxx $($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
 
-        It 'includes specified <timestamp format> in WorkingFormat if supplied' {
+        It 'includes specified <timestamp format> in WorkingFormat when supplied' {
             $messageFormat = 'xxx {Timestamp : d} xxx'
             $workingFormat = 'xxx $($Timestamp.ToString(''d'')) xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
@@ -353,12 +395,12 @@ InModuleScope Prog {
                 -ExpectedWorkingFormat $workingFormat
         }
 
-        It 'generates correct WorkingFormat if placeholder embedded in text without surrounding spaces' {
+        It 'generates correct WorkingFormat when placeholder embedded in text without surrounding spaces' {
             $formatTemplate = 'xxx[FIELD PLACEHOLDER]xxx'
             TestWorkingFormatField -FieldName Message -FormatTemplate $formatTemplate
         }
 
-        It 'generates correct Timestamp field in WorkingFormat if placeholder embedded in text without surrounding spaces' {
+        It 'generates correct Timestamp field in WorkingFormat when placeholder embedded in text without surrounding spaces' {
             $messageFormat = 'xxx{Timestamp : d}xxx'
             $workingFormat = 'xxx$($Timestamp.ToString(''d''))xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
@@ -377,7 +419,7 @@ InModuleScope Prog {
                 -ExpectedWorkingFormat $workingFormat
         }
 
-        It 'FieldsPresent is empty if no placeholders are present in message format text' {
+        It 'FieldsPresent is empty when no placeholders are present in message format text' {
             $messageFormat = 'xxx xxx'
             $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
             $hashTable.FieldsPresent.Count | Should -Be 0
@@ -385,7 +427,7 @@ InModuleScope Prog {
 
         function TestFieldsPresent([string]$FieldName)
         {
-            It "adds '$FieldName' to FieldsPresent array if {$FieldName} placeholder present in message format text" {
+            It "adds '$FieldName' to FieldsPresent array when {$FieldName} placeholder present in message format text" {
                 $messageFormat = "xxx {$FieldName} xxx"
                 $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
                 $hashTable.FieldsPresent.Count | Should -Be 1
@@ -399,7 +441,7 @@ InModuleScope Prog {
         TestFieldsPresent "Category"
         TestFieldsPresent "Timestamp"
 
-        It 'adds multiple field names to FieldsPresent if multiple placeholders in message format text' {
+        It 'adds multiple field names to FieldsPresent when multiple placeholders in message format text' {
             $messageFormat = 'xxx {MessageLevel} {CallerName} {Message} xxx'
             $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
             $hashTable.FieldsPresent.Count | Should -Be 3

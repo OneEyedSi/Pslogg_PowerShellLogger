@@ -1663,6 +1663,45 @@ function Private_ValidateHostColor (
 
 <#
 .SYNOPSIS
+Function called by ValidateScript to check if the specified log level is valid when passed as a 
+parameter.
+
+.DESCRIPTION
+If the specified log level is valid this function returns $True.  If the specified log level is 
+not valid the function throws an exception rather than returning $False.  
+
+.NOTES        
+Allows multiple parameters to be validated in a single place, so the validation code does not 
+have to be repeated for each parameter.  
+
+Throwing an exception when the log level is invalid allows us to specify a custom error message. 
+If the function simply returned $False PowerShell would generate a standard error message that 
+does not indicate why the validation failed.
+#>
+function Private_ValidateLogLevel (
+	[Parameter(Mandatory=$True)]
+	[string]$LevelToTest, 
+
+    [parameter(Mandatory=$False)]
+	[switch]$ExcludeOffLevel
+	)
+{	
+    $validLevels = @('OFF', 'ERROR', 'WARNING', 'INFORMATION', 'DEBUG', 'VERBOSE')
+    if ($ExcludeOffLevel.IsPresent)
+    {
+        $validLevels[0] = $Null
+    }
+	
+	if ($validLevels -notcontains $LevelToTest)
+	{
+		throw [System.ArgumentException] "INVALID LOG LEVEL ERROR: '$LevelToTest' is not a valid log level."
+	}
+			
+	return $True
+}
+
+<#
+.SYNOPSIS
 Gets a Timestamp format string from a specified message format string.
 
 .DESCRIPTION
