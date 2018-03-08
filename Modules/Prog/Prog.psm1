@@ -328,7 +328,7 @@ function Write-LogMessage
 
         [Parameter(Mandatory=$False,
                      ParameterSetName='MessageLevelText')]
-        [ValidateSet('ERROR', 'WARNING', 'INFORMATION', 'DEBUG', 'VERBOSE')]
+        [ValidateScript({ Private_ValidateLogLevel -LevelToTest $_ -ExcludeOffLevel })]
         [string]$MessageLevel,
 
         [Parameter(Mandatory=$False,
@@ -1116,8 +1116,8 @@ function Set-LogConfiguration
         [Hashtable]$LogConfiguration, 
 
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateSet("Off", "Error", "Warning", "Information", "Debug", "Verbose")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]        
+        [ValidateScript({ Private_ValidateLogLevel -LevelToTest $_ })]
         [string]$LogLevel, 
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
