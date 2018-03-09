@@ -202,13 +202,13 @@ Possible field names are:
 	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
                     calling Write-LogMessage the default Category from the logger configuration 
                     will be used.
+
 	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
                     message may be an Error message or a Debug message.  The MessageLevel will 
                     always be displayed in upper case.
 
 .PARAMETER MessageLevel
 A string that specifies the Message Level of the message.  Possible values are the LogLevels:
-    OFF
     ERROR
     WARNING
     INFORMATION
@@ -307,6 +307,64 @@ the -MessageLevel parameter or by one of the Message Level switch parameters:
 -IsError, -IsWarning, -IsInformation, -IsDebug or -IsVerbose.
 
 -WriteToHost and -WriteToStreams cannot both be set at the same time.
+
+.EXAMPLE
+Write error message to the log:
+
+    try
+    {
+	    ...
+    }
+    catch [System.IO.FileNotFoundException]
+    {
+	    Write-LogMessage -Message "Error while updating file: $_.Exception.Message" -IsError
+    }
+
+.EXAMPLE
+Write debug message to the log:
+
+    Write-LogMessage "Updating user settings for $userName..." -IsDebug
+
+The -Message parameter is optional.
+
+.EXAMPLE
+Write to the log, specifying the MessageLevel rather than using a Message Level switch:
+
+    Write-LogMessage "Updating user settings for $userName..." -MessageLevel 'DEBUG'
+
+.EXAMPLE
+Write message to the log with a certain category:
+
+    Write-LogMessage 'File copy completed successfully.' -Category 'Success' -IsInformation
+
+.EXAMPLE
+Write message to the PowerShell host in a specified color:
+
+    Write-LogMessage 'Updating user settings...' -WriteToHost -HostTextColor Cyan
+
+The MessageLevel wasn't specified so it will default to INFORMATION.
+
+.EXAMPLE
+Write message to the Debug PowerShell stream, rather than to the host:
+
+    Write-LogMessage 'Updating user settings...' -WriteToStreams -IsDebug
+
+.EXAMPLE
+Write message with a custom message format which only applies to this one message:
+
+    Write-LogMessage "***** Running on server: $serverName *****" -MessageFormat '{message}'
+
+The message written to the log will only include the specified message text.  It will not 
+include other fields, such as {Timestamp} or {CallerName}.
+
+.LINK
+Get-LogConfiguration
+
+.LINK
+Set-LogConfiguration
+
+.LINK
+Reset-LogConfiguration
 
 #>
 function Write-LogMessage     
@@ -614,44 +672,56 @@ Gets the log configuration settings.
 
 .OUTPUTS
 A hash table with the following keys:
-    LogLevel: The name of a log level.  This determines whether a log message will be logged or 
-        not.  
+
+    LogLevel: A string that specifies the Log Level of the logger.  It determines whether a 
+        message will be logged or not.  
+
+        Possible values, in order from lowest to highest, are:
+            OFF
+            ERROR
+            WARNING
+            INFORMATION
+            DEBUG
+            VERBOSE
+
+        Only messages with a Message Level the same as or lower than the LogLevel will be logged.
+
+        For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
+        INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
+        VERBOSE will not be logged, as those levels are higher than INFORMATION;
+
+    LogFile: A hash table with the configuration details of the log file that log messages will be 
+        written to, in addition to the PowerShell host or PowerShell streams.  If you don't want 
+        to write to a log file either set the LogFile value to $Null, or set LogFile.Name to 
+        $Null.
         
-        Possible log levels, in order from lowest to highest, are:
-            "Off"
-            "Error"
-            "Warning"
-            "Information"
-            "Debug"
-            "Verbose" 
+        The hash table has the following keys:
 
-        Only log messages at a level the same as or lower than the LogLevel will be logged.  For 
-        example, if the LogLevel is "Information" then only log messages at a level of 
-        Information, Warning or Error will be logged.  Messages at a level of Debug or Verbose 
-        will not be logged, as these log levels are higher than Information;
+            Name: The path to the log file.  If LogFile.Name is $Null, empty or blank log then 
+                messages will be written to the PowerShell host or PowerShell streams but not 
+                written to a log file.  
+                
+                If LogFile.Name is specified without a path, or with a relative path, it will be 
+                relative to the directory of the calling script, not this module.  The default 
+                value for Log.FileName is "Results.log";
 
-    LogFileName: The path to the log file.  If LogFileName is $Null, empty or blank log messages 
-        will be displayed on screen but not written to a log file.  If LogFileName is specified 
-        without a path, or with a relative path, it will be relative to the directory of the 
-        calling script, not this module.  The default value for LogFileName is "Results.log";
+            IncludeDateInFileName: If $True then the log file name will have a date, of the form 
+                '_yyyyMMdd' appended to the end of the file name.  For example, 
+                'Results_20171129.log'.  The default value is $True;
 
-    IncludeDateInFileName: If $True then the log file name will have a date, of the form 
-        "_yyyyMMdd" appended to the end of the file name.  For example, "Script_20171129.log".  
-        The default value is $True;
-
-    OverwriteLogFile: If $True any existing log file with the same name as LogFileName, including 
-        the date if IncludeDateInFileName is set, will be overwritten by the first message logged 
-        in a given session.  Subsequent messages written in the same session will be appended to 
-        the end of the log file.  
+            Overwrite: If $True any existing log file with the same name as LogFile.Name, 
+                including the date if LogFile.IncludeDateInFileName is set, will be overwritten 
+                by the first message logged in a given session.  Subsequent messages written in 
+                the same session will be appended to the end of the log file.  
         
-        If $False new log messages will be appended to the end of the existing log file.  
+                If $False new log messages will be appended to the end of the existing log file.  
         
-        If no file with the same name exists it will be created, regardless of the value of 
-        OverwriteLogFile.  
+                If no file with the same name exists it will be created, regardless of the value 
+                of Log.OverwriteLogFile.  
         
-        The default value is $True;
+                The default value is $True;
 
-    WriteToHost: If $True then all log messages wiill be written to the host.  If $False then log 
+    WriteToHost: If $True then all log messages will be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
         written to the error stream, Warning messages will be written to the warning stream, etc.  
         The stream for Success, Failure and PartialFailure messages is the information stream.  
@@ -670,151 +740,7 @@ A hash table with the following keys:
 		will not be included in the logged messages.
 		
 		Possible field names are:
-			{Message}     : The supplied text message to write to the log.
 
-			{Timestamp}	  : The date and time the log message is recorded.  The Timestamp field may 	
-							include an optional datetime format string, following the field name 
-                            and separated from it by a colon, ":".  
-                            
-                            Any .NET datetime format string is valid.  For example, "{Timestamp:d}" 
-                            will format the timestamp using the short date pattern, which is 
-                            "MM/dd/yyyy" in the US.  
-                            
-                            While the field names in the MessageFormat string are NOT case sentive 
-                            the datetime format string IS case sensitive.  This is because .NET 
-                            datetime format strings are case sensitive.  For example "d" is the 
-                            short date pattern while "D" is the long date pattern.  
-                            
-                            The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff"
-
-			{CallerName} : The name of the function or script that is writing to the log.  
-
-                            When determining the caller name all functions in this module will be 
-                            ignored; the caller name will be the external function or script that 
-                            calls into this module to write to the log.  
-                            
-                            If a function is writing to the log the function name will be 
-                            displayed.  If the log is being written to from a script file, outside 
-                            any function, the name of the script file will be displayed.  If the 
-                            log is being written to manually from the Powershell console then 
-                            '[CONSOLE]' will be displayed.
-
-			{Category} : The Category of the message.  It will always be displayed in upper case.
-
-			{MessageLevel}    : The Log Level at which the message is being recorded.  For example, the 
-                            message may be an Error message or a Debug message.  The MessageLevel will 
-                            always be displayed in upper case.
-			
-		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}";
-
-    HostTextColor: A hash table that specifies the different text colors that will be used for 
-        different log levels, for log messages written to the host.  HostTextColor only applies 
-        if WriteToHost is $True.  The hash table has the following keys:
-            Error: The text color for messages of log level Error.  The default value is Red;
-
-            Warning: The text color for messages of log level Warning.  The default value is 
-            Yellow;
-
-            Information: The text color for messages of log level Information.  The default 
-            value is Cyan;
-
-            Debug: The text color for messages of log level Debug.  The default value is White;
-
-            Verbose: The text color for messages of log level Verbose.  The default value is White;
-
-        Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
-        'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
-        'Red', 'Magenta', 'Yellow', 'White';
-
-    CategoryInfo: A hash table that defines properties for Message Categories.  
-    
-        When writing a log message any string can be used for a Message Category.  However, to 
-        provide special functionality for messages of a given category, that category should be 
-        added to the configuration CategoryInfo hash table.
-        
-        The keys of the CategoryInfo hash table are the category names that will be used as 
-        Message Categories.  The CategoryInfo values are nested hash tables that set the 
-        properties of each category.  
-        
-        Currently two properties are supported:
-
-            IsDefault: Indicates the category that will be used as the default, if no -Category 
-                is specified in Write-LogMesssage;
-
-            Color: The text color for messages of the specified category, if they are written to 
-                the host. 
-.NOTES
-The hash table returned by Get-LogConfiguration is not a copy of the Prog configuration, it is 
-a reference to the live configuration.  This means any changes to the hash table retrieved by 
-Get-LogConfiguration will be reflected in Prog's configuration.
-
-
-<#
-.SYNOPSIS
-Sets one or more of the log configuration settings.    
-
-.DESCRIPTION 
-Sets one or more of the log configuration settings. 
-
-.PARAMETER LogConfiguration
-A hash table representing all configuration settings.  It must have the following keys:
-    LogLevel: The name of a log level.  This determines whether a log message will be logged or 
-        not.  
-        
-        Possible log levels, in order from lowest to highest, are:
-            "Off"
-            "Error"
-            "Warning"
-            "Information"
-            "Debug"
-            "Verbose" 
-
-        Only log messages at a level the same as or lower than the LogLevel will be logged.  For 
-        example, if the LogLevel is "Information" then only log messages at a level of 
-        Information, Warning or Error will be logged.  Messages at a level of Debug or Verbose 
-        will not be logged, as these log levels are higher than Information;
-
-    LogFileName: The path to the log file.  If LogFileName is $Null, empty or blank log messages 
-        will be displayed on screen but not written to a log file.  If LogFileName is specified 
-        without a path, or with a relative path, it will be relative to the directory of the 
-        calling script, not this module.  The default value for LogFileName is "Results.log";
-
-    IncludeDateInFileName: If $True then the log file name will have a date, of the form 
-        "_yyyyMMdd" appended to the end of the file name.  For example, "Script_20171129.log".  
-        The default value is $True;
-
-    OverwriteLogFile: If $True any existing log file with the same name as LogFileName, including 
-        the date if IncludeDateInFileName is set, will be overwritten by the first message logged 
-        in a given session.  Subsequent messages written in the same session will be appended to 
-        the end of the log file.  
-        
-        If $False new log messages will be appended to the end of the existing log file.  
-        
-        If no file with the same name exists it will be created, regardless of the value of 
-        OverwriteLogFile.  
-        
-        The default value is $True;
-
-    WriteToHost: If $True then all log messages wiill be written to the host.  If $False then log 
-        messages will be written to the appropriate stream.  For example, Error messages will be 
-        written to the error stream, Warning messages will be written to the warning stream, etc.  
-        The stream for Success, Failure and PartialFailure messages is the information stream.  
-        The default value is $True;
-		
-	MessageFormat: A string that sets the format of log messages.  
-
-        Text enclosed in curly braces, {...}, represents the name of a field which will be included 
-        in the logged message.  The field names are not case sensitive.  
-        
-        Any other text, not enclosed in curly braces, will be treated as a string literal and will 
-        appear in the logged message exactly as specified.	
-		
-		Leading spaces in the MessageFormat string will be retained when the message is written to 
-		the logs to allow log messages to be indented.  Trailing spaces in the MessageFormat string 
-		will not be included in the logged messages.
-		
-		Possible field names are:
 			{Message}     : The supplied text message to write to the log;
 
 			{Timestamp}	  : The date and time the log message is recorded.  The Timestamp field may 	
@@ -844,40 +770,123 @@ A hash table representing all configuration settings.  It must have the followin
                             log is being written to manually from the Powershell console then 
                             '[CONSOLE]' will be displayed.
 
-			{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the 
+			{Category} : The Category of the message.  It will always be displayed in upper case.
+
+			{MessageLevel}    : The Log Level at which the message is being recorded.  For example, the 
                             message may be an Error message or a Debug message.  The MessageLevel will 
                             always be displayed in upper case.
-
-			{Result}      : Used with result-related message types: Success, Failure and 
-                            PartialFailure.  The Result will always be displayed in upper case.
-
-			{Category} : The Category of the message.  This combines LogLevel and Result: 
-                            It includes the log levels Error, Warning, Information, Debug and 
-                            Verbose as well as the results Success, Failure and PartialFailure.  
-                            If does not include the log level Off because in that case the 
-                            message would not be logged.  The Category will always be 
-                            displayed in upper case.
 			
 		The default MessageFormat is: 
-		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}";
+		'{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}';
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
-        if WriteToHost is $True.  The hash table has the following keys:
+        if WriteToHost is $True.  
+        
+        The hash table has the following keys:
+
             Error: The text color for messages of log level Error.  The default value is Red;
 
             Warning: The text color for messages of log level Warning.  The default value is 
-            Yellow;
+                Yellow;
 
             Information: The text color for messages of log level Information.  The default 
-            value is Cyan;
+                value is Cyan;
 
             Debug: The text color for messages of log level Debug.  The default value is White;
 
-            Verbose: The text color for messages of log level Verbose.  The default value is White;
+            Verbose: The text color for messages of log level Verbose.  The default value is 
+                White.  
 
-            Success: The text color for messages representing a result of Success.  The default 
-                value is Green;
+        Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
+        'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
+        'Red', 'Magenta', 'Yellow', 'White';
+
+    CategoryInfo: A hash table that defines properties for Message Categories.  
+    
+        When writing a log message any string can be used for a Message Category.  However, to 
+        provide special functionality for messages of a given category, that category should be 
+        added to the configuration CategoryInfo hash table.
+        
+        The keys of the CategoryInfo hash table are the category names that will be used as 
+        Message Categories.  The CategoryInfo values are nested hash tables that set the 
+        properties of each category.  
+        
+        Currently two properties are supported:
+
+            IsDefault: Indicates the category that will be used as the default, if no -Category 
+                is specified in Write-LogMesssage;
+
+            Color: The text color for messages of the specified category, if they are written to 
+                the host. 
+.NOTES
+The hash table returned by Get-LogConfiguration is not a copy of the Prog configuration, it is 
+a reference to the live configuration.  This means any changes to the hash table retrieved by 
+Get-LogConfiguration will be reflected in Prog's configuration.
+
+.EXAMPLE
+Get the text color for messages with category Success:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.CategoryInfo.Success.Color 
+
+    Green
+
+.EXAMPLE
+Get the text colors for all message levels:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.HostTextColor 
+
+    Name                 Value
+    ----                 -----
+    Debug                White
+    Error                Red
+    Warning              Yellow
+    Verbose              White
+    Information          Cyan
+
+.EXAMPLE
+Get the text color for messages of level ERROR:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.HostTextColor.Error 
+
+    Red
+
+.EXAMPLE
+Get the name of the file messages will be logged to:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.LogFile.Name 
+
+    Results.log
+
+.EXAMPLE
+Get the format of log messages:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.MessageFormat 
+
+    {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
+
+.EXAMPLE
+Use Get-LogConfiguration to update Prog's configuration:
+
+    $config = Get-LogConfiguration
+    $config.LogLevel = 'ERROR'
+    $config.LogFile.Name = 'Error.log'
+    $config.CategoryInfo['FileCopy'] = @{Color = 'DarkYellow'}
+    
+.LINK
+Write-LogMessage
+
+.LINK
+Set-LogConfiguration
+
+.LINK
+Reset-LogConfiguration
+       
 #>
 function Get-LogConfiguration()
 {
@@ -888,61 +897,66 @@ function Get-LogConfiguration()
     return $script:_logConfiguration
 }
 
-            Failure: The text color for messages representing a result of Failure.  The default 
-                value is Red;
+<#
+.SYNOPSIS
+Sets one or more of the log configuration settings.    
 
-            PartialFailure: The text color for messages representing a result of 
-                Partial Failure.  Partial Failure may be used where, for example, multiple items 
-                are updated and some are updated successfully while some are not.  The default 
-                value is Yellow.  
+.DESCRIPTION 
+Sets one or more of the log configuration settings. 
 
-        Possible values for text colors are: "Black", "DarkBlue", "DarkGreen", "DarkCyan", 
-        "DarkRed", "DarkMagenta", "DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", 
-        "Red", "Magenta", "Yellow", "White". 
+.PARAMETER LogConfiguration
+A hash table representing all configuration settings.  For the hash table format see the help 
+topic for Get-LogConifguration.
 
 .PARAMETER LogLevel
-The name of a log level, which determines whether a log message will be logged or not. 
+A string that specifies the Log Level of the logger.  It determines whether a message will be 
+logged or not.  
 
-Possible log levels, in order from lowest to highest, are:
-    "Off"
-    "Error"
-    "Warning"
-    "Information"
-    "Debug"
-    "Verbose" 
+Possible values, in order from lowest to highest, are:
+    OFF
+    ERROR
+    WARNING
+    INFORMATION
+    DEBUG
+    VERBOSE
 
-Only log messages at a level the same as or lower than the LogLevel will be logged.  For example, 
-if the LogLevel is "Information" then only log messages at a level of Information, Warning or 
-Error will be logged.  Messages at a level of Debug or Verbose will not be logged, as these log 
-levels are higher than Information. 
+Only messages with a Message Level the same as or lower than the LogLevel will be logged.
+
+For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
+INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
+VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
 .PARAMETER LogFileName
-The path to the log file.  If LogFileName is $Null, empty or blank log messages will not be 
-written to a log file, although they will be written to the host or to streams.  If LogFileName is 
-specified without a path, or with a relative path, it will be relative to the directory of the 
-calling script, not this module.
+The path to the log file.  If LogFile.Name is $Null, empty or blank log then messages will 
+be written to the PowerShell host or PowerShell streams but not written to a log file.  
+                
+If LogFile.Name is specified without a path, or with a relative path, it will be relative to 
+the directory of the calling script, not this module.  The default value for Log.FileName is 
+'Results.log'.
 
 .PARAMETER IncludeDateInFileName
-A switch parameter that, if set, will include a date in the log file name.  The date will take the 
-form "_yyyyMMdd" appended to the end of the file name.  For example, "Script_20171129.log".  
+A switch parameter that, if set, will include a date in the log file name.  The date will take 
+the form '_yyyyMMdd' appended to the end of the file name.  For example, 'Results_20171129.log'.  
 
 IncludeDateInFileName and ExcludeDateFromFileName cannot both be set at the same time.
 
 .PARAMETER ExcludeDateFromFileName
-A switch parameter that is the opposite of IncludeDateInFileName.  If set it will exclude the date 
-from the log file name.  For example, "Results.log".  
+A switch parameter that is the opposite of IncludeDateInFileName.  If set it will exclude the 
+date from the log file name.  For example, 'Results.log'.  
 
 IncludeDateInFileName and ExcludeDateFromFileName cannot both be set at the same time.
 
 .PARAMETER OverwriteLogFile
 A switch parameter that, if set, will overwrite any existing log file with the same name as 
-LogFileName, including a date if IncludeDateInFileName is set.  
+LogFile.Name, including a date if LogFile.IncludeDateInFileName is set.  The log file will only 
+be overwritten by the first message logged in a given session.  Subsequent messages written in 
+the same session will be appended to the end of the log file.
 
 OverwriteLogFile and AppendToLogFile cannot both be set at the same time.
 
 .PARAMETER AppendToLogFile
 A switch parameter that is the opposite of OverwriteLogFile.  If set new log messages will be 
-appended to the end of an existing log file, if it has the same name as LogFileName, including a 
+appended to the end of an existing log file, if it has the same name as Log.FileName, including a 
 date if IncludeDateInFileName is set.   
 
 OverwriteLogFile and AppendToLogFile cannot both be set at the same time.
@@ -1009,100 +1023,175 @@ Possible field names are:
                     message may be an Error message or a Debug message.  The MessageLevel will 
                     always be displayed in upper case.
 
-	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
-                    The Result will always be displayed in upper case.
+.PARAMETER CategoryInfoItem
+Sets one or more items in the CategoryInfo hash table. 
 
-	{Category} : The Category of the message.  This combines LogLevel and Result: It includes 
-                    the log levels Error, Warning, Information, Debug and Verbose as well as the 
-                    results Success, Failure and PartialFailure.  The Category will always be 
-                    displayed in upper case.
+CategoryInfoItem can take two different arguments:
+
+    1) A hash table, of the form:
+            @{
+                <key1> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
+                <key2> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
+                ... 
+            }
+
+        The items of the hash table will be added to the CategoryInfo hash table, if the keys do 
+        not already exist in the CategoryInfo hash table.  If the keys do exist in the 
+        CategoryInfo hash table their values will be replaced.         
+        
+        The keys of the items (<key1>, <key2> in the hash table above) are Message Category 
+        names.  The values of the items ( @{ <property1>=<value1>; <property2>=<value2>; ...n } 
+        in the hash table above) are hash tables that attach properties to the associated Message 
+        Categories.
+
+        Currently two properties are supported for each CategoryInfoItem:
+
+            IsDefault: Indicates the category that will be used as the default, if no -Category 
+                is specified in Write-LogMesssage;
+
+            Color: The text color for messages of the specified category, if they are written to 
+                the host. 
+
+    2) A two-element array, of the form:
+            <key>, @{ <property1>=<value1>; <property2>=<value2>; ...n }
+
+        This sets a single CategoryInfo item.  If the key already exists the value will be 
+        replaced.  If the key does not already exist it will be created.
+
+.PARAMETER CategoryInfoKeyToRemove
+Removes one or more items from the CategoryInfo hash table.
+
+CategoryInfoKeyToRemove can take two different arguments:
+
+    1) An array of CategoryInfo keys;
+
+    2) A single CategoryInfo key.
 
 .PARAMETER HostTextColorConfiguration
 A hash table specifying the different text colors that will be used for different log levels, 
-for log messages written to the host.  The hash table must have the following keys:
+for log messages written to the host.  
+
+The hash table must have the following keys:
+
     Error: The text color for messages of log level Error.  The default value is Red;
 
     Warning: The text color for messages of log level Warning.  The default value is 
-    Yellow;
+        Yellow;
 
     Information: The text color for messages of log level Information.  The default 
-    value is Cyan;
+        value is Cyan;
 
     Debug: The text color for messages of log level Debug.  The default value is White;
 
-    Verbose: The text color for messages of log level Verbose.  The default value is White;
+    Verbose: The text color for messages of log level Verbose.  The default value is White.  
 
-    Success: The text color for messages representing a result of Success.  The default 
-        value is Green;
+Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
+'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
+'Red', 'Magenta', 'Yellow', 'White'.
 
-    Failure: The text color for messages representing a result of Failure.  The default 
-        value is Red;
-
-    PartialFailure: The text color for messages representing a result of 
-        Partial Failure.  Partial Failure may be used where, for example, multiple items 
-        are updated and some are updated successfully while some are not.  The default 
-        value is Yellow.  
-
-Possible values for text colors are: "Black", "DarkBlue", "DarkGreen", "DarkCyan", 
-"DarkRed", "DarkMagenta", "DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", 
-"Red", "Magenta", "Yellow", "White".
+These colors are only used if WriteToHost is set.  If WriteToStreams is set these colors are 
+ignored.
 
 .PARAMETER ErrorTextColor
-The name of the text color for messages written to the host at log level Error.  
+The text color for messages written to the host at message level Error.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
-Acceptable values are: "Black", "DarkBlue", "DarkGreen", "DarkCyan", "DarkRed", "DarkMagenta", 
-"DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", "Red", "Magenta", "Yellow", "White".
+Acceptable values are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
+'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
+'Red', 'Magenta', 'Yellow', 'White'.
 
 .PARAMETER WarningTextColor
-The name of the text color for messages written to the host at log level Warning.  
+The text color for messages written to the host at message level Warning.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
 Acceptable values are as per ErrorTextColor.
 
 .PARAMETER InformationTextColor
-The name of the text color for messages written to the host at log level Information.  
+The text color for messages written to the host at message level Information.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
 Acceptable values are as per ErrorTextColor.
 
 .PARAMETER DebugTextColor
-The name of the text color for messages written to the host at log level Debug.  
+The text color for messages written to the host at message level Debug.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
 Acceptable values are as per ErrorTextColor.
 
 .PARAMETER VerboseTextColor
-The name of the text color for messages written to the host at log level Verbose.  
+The text color for messages written to the host at message level Verbose.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
 Acceptable values are as per ErrorTextColor.
 
-.PARAMETER SuccessTextColor
-The name of the text color for Success messages written to the host.  
+.EXAMPLE
+Use parameter -LogConfiguration to update the entire configuration at once:
 
-This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
+    $hostTextColor = @{
+							Error = 'DarkRed'
+							Warning = 'DarkYellow'
+							Information = 'DarkCyan'
+							Debug = 'Gray'
+							Verbose = 'White'
+						}
 
-Acceptable values are as per ErrorTextColor.
+	$logConfiguration = @{   
+							LogLevel = 'DEBUG'
+							MessageFormat = '{CallerName} | {Category} | {Message}'
+							WriteToHost = $True
+							HostTextColor = $hostTextColor
+							LogFile = @{
+											Name = 'Debug.log'
+											IncludeDateInFileName = $False
+											Overwrite = $False
+										}
+							CategoryInfo = @{}
+						}
+						
+	Set-LogConfiguration -LogConfiguration $logConfiguration
 
-.PARAMETER FailureTextColor
-The name of the text color for Failure messages written to the host.  
+.EXAMPLE
+Set the details of the log file using individual parameters:
 
-This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
+    Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendToLogFile
 
-Acceptable values are as per ErrorTextColor.
+.EXAMPLE
+Set the LogLevel and MessageFormat using individual parameters:
 
-.PARAMETER PartialFailureTextColor
-The name of the text color for PartialFailure messages written to the host.  
+    Set-LogConfiguration -LogLevel Warning `
+	    -MessageFormat '{Timestamp:yyyy-MM-dd hh:mm:ss},{Category},{Message}'
 
-This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
+.EXAMPLE
+Set the text colors used by the host to display error and warning messages:
 
-Acceptable values are as per ErrorTextColor.
+    Set-LogConfiguration -ErrorTextColor DarkRed -WarningTextColor DarkYellow
+
+.EXAMPLE
+Set all text colors simultaneously:
+
+	$hostColors = @{
+						Error = 'DarkRed'
+						Warning = 'DarkYellow'
+						Information = 'DarkCyan'
+						Debug = 'Cyan'
+						Verbose = 'Gray'
+					}
+					
+	Set-LogConfiguration -HostTextColorConfiguration $hostColors
+    
+.LINK
+Write-LogMessage
+
+.LINK
+Get-LogConfiguration
+
+.LINK
+Reset-LogConfiguration
 #>
 function Set-LogConfiguration
 {
