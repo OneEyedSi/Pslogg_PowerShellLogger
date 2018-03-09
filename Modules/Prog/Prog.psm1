@@ -744,18 +744,11 @@ A hash table with the following keys:
 
             Color: The text color for messages of the specified category, if they are written to 
                 the host. 
+.NOTES
+The hash table returned by Get-LogConfiguration is not a copy of the Prog configuration, it is 
+a reference to the live configuration.  This means any changes to the hash table retrieved by 
+Get-LogConfiguration will be reflected in Prog's configuration.
 
-.NOTES        
-All result messages, Success, Failure and PartialFailure, are written at log level Information.    
-#>
-function Get-LogConfiguration()
-{
-    if ($script:_logConfiguration -eq $Null -or $script:_logConfiguration.Keys.Count -eq 0)
-    {
-        $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
-    }
-    return Private_DeepCopyHashTable $script:_logConfiguration
-}
 
 <#
 .SYNOPSIS
@@ -885,6 +878,15 @@ A hash table representing all configuration settings.  It must have the followin
 
             Success: The text color for messages representing a result of Success.  The default 
                 value is Green;
+#>
+function Get-LogConfiguration()
+{
+    if ($script:_logConfiguration -eq $Null -or $script:_logConfiguration.Keys.Count -eq 0)
+    {
+        $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
+    }
+    return $script:_logConfiguration
+}
 
             Failure: The text color for messages representing a result of Failure.  The default 
                 value is Red;
