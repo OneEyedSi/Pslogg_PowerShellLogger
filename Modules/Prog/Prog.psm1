@@ -37,7 +37,7 @@ $_defaultHostTextColor = @{
                                 Verbose = "White"
                             }
 
-$_defaultCategory = @{
+$_defaultCategoryInfo = @{
                         Progress = @{ IsDefault = $True }
                         Success = @{ Color = 'Green' }
                         Failure = @{ Color = 'Red' }
@@ -54,7 +54,7 @@ $_defaultLogConfiguration = @{
                                                 IncludeDateInFileName = $True
                                                 Overwrite = $True
                                             }
-                                Category = $_defaultCategory
+                                CategoryInfo = $_defaultCategoryInfo
                             }
 
 $_defaultTimestampFormat = 'yyyy-MM-dd hh:mm:ss.fff'	
@@ -199,13 +199,12 @@ Possible field names are:
                     of the script file will be displayed.  If the log is being written to manually 
                     from the Powershell console then '[CONSOLE]' will be displayed.
 
+	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
+                    calling Write-LogMessage the default Category from the logger configuration 
+                    will be used.
 	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
                     message may be an Error message or a Debug message.  The MessageLevel will 
                     always be displayed in upper case.
-
-	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
-                    calling Write-LogMessage the default Message Category from the logger 
-                    configuration will be used.
 
 .PARAMETER MessageLevel
 A string that specifies the Message Level of the message.  Possible values are the LogLevels:
@@ -283,14 +282,14 @@ at the same time.  The Message Type switch parameters are:
 .PARAMETER Category
 A string that specifies the Message Category of the message.  Any string can be specified.  
 
-If the string matches one of the keys in the logger configuration Category.Color hash table the 
-color specified by that key will be used 
+The Message Category can have a color specified in the configuration CategoryInfo hash table.  If 
+the -HostTextColor parameter is not specified and the message is being written to the host, 
+the ForegroundColor will be set to the CategoryInfo color from the configuration.
 
-If the message will be written to the host and the -HostTextColor parameter is not specified, and 
-the -Category string matches one of the logger configuration Category.Color hash table keys, the 
-test ForegroundColor will be set to the color specified in Category.Color.  For example, if the 
--Category is 'Success' the text ForegroundColor will be set to the color specified by logger 
-configuration Category.Color.Success;
+For example, if the -Category is 'Success' the text ForegroundColor will be set to the logger 
+configuration CategoryInfo.Success.Color.
+
+-Category will default to the configuration CategoryInfo name which has IsDefault set.
 
 .PARAMETER WriteToHost
 A switch parameter that, if set, will write the message to the host, as opposed to one of the 
@@ -444,7 +443,7 @@ function Write-LogMessage
     $configuredCategories = @{}
     if ($script:_logConfiguration.ContainsKey('Category'))
     {
-        $configuredCategories = $script:_logConfiguration.Category
+        $configuredCategories = $script:_logConfiguration.CategoryInfo
     }
 
     if ([string]::IsNullOrWhiteSpace($Category) -and $configuredCategories)
@@ -700,19 +699,11 @@ A hash table with the following keys:
                             log is being written to manually from the Powershell console then 
                             '[CONSOLE]' will be displayed.
 
-			{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the 
+			{Category} : The Category of the message.  It will always be displayed in upper case.
+
+			{MessageLevel}    : The Log Level at which the message is being recorded.  For example, the 
                             message may be an Error message or a Debug message.  The MessageLevel will 
                             always be displayed in upper case.
-
-			{Result}      : Used with result-related message types: Success, Failure and 
-                            PartialFailure.  The Result will always be displayed in upper case.
-
-			{Category} : The Category of the message.  This combines LogLevel and Result: 
-                            It includes the log levels Error, Warning, Information, Debug and 
-                            Verbose as well as the results Success, Failure and PartialFailure.  
-                            If does not include the log level Off because in that case the 
-                            message would not be logged.  The Category will always be 
-                            displayed in upper case.
 			
 		The default MessageFormat is: 
 		"{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}";
@@ -732,20 +723,27 @@ A hash table with the following keys:
 
             Verbose: The text color for messages of log level Verbose.  The default value is White;
 
-            Success: The text color for messages representing a result of Success.  The default 
-                value is Green;
+        Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
+        'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
+        'Red', 'Magenta', 'Yellow', 'White';
 
-            Failure: The text color for messages representing a result of Failure.  The default 
-                value is Red;
+    CategoryInfo: A hash table that defines properties for Message Categories.  
+    
+        When writing a log message any string can be used for a Message Category.  However, to 
+        provide special functionality for messages of a given category, that category should be 
+        added to the configuration CategoryInfo hash table.
+        
+        The keys of the CategoryInfo hash table are the category names that will be used as 
+        Message Categories.  The CategoryInfo values are nested hash tables that set the 
+        properties of each category.  
+        
+        Currently two properties are supported:
 
-            PartialFailure: The text color for messages representing a result of 
-                Partial Failure.  Partial Failure may be used where, for example, multiple items 
-                are updated and some are updated successfully while some are not.  The default 
-                value is Yellow.  
+            IsDefault: Indicates the category that will be used as the default, if no -Category 
+                is specified in Write-LogMesssage;
 
-        Possible values for text colors are: "Black", "DarkBlue", "DarkGreen", "DarkCyan", 
-        "DarkRed", "DarkMagenta", "DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", 
-        "Red", "Magenta", "Yellow", "White".
+            Color: The text color for messages of the specified category, if they are written to 
+                the host. 
 
 .NOTES        
 All result messages, Success, Failure and PartialFailure, are written at log level Information.    
@@ -1003,9 +1001,11 @@ Possible field names are:
                     of the script file will be displayed.  If the log is being written to manually 
                     from the Powershell console then '[CONSOLE]' will be displayed.
 
-	{MessageLevel}    : The LogLevel at which the message is being recorded.  For example, the message 
-                    may be an Error message or a Debug message.  The MessageLevel will always be 
-                    displayed in upper case.
+	{Category}    : The Category of the message.  It will always be displayed in upper case.
+
+	{MessageLevel} : The Log Level at which the message is being recorded.  For example, the 
+                    message may be an Error message or a Debug message.  The MessageLevel will 
+                    always be displayed in upper case.
 
 	{Result}      : Used with result-related message types: Success, Failure and PartialFailure.  
                     The Result will always be displayed in upper case.
