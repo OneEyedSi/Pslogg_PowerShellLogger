@@ -30,11 +30,11 @@ $_logLevels = @{
                 }
 
 $_defaultHostTextColor = @{
-                                Error = "Red"
-                                Warning = "Yellow"
-                                Information = "Cyan"
-                                Debug = "White"
-                                Verbose = "White"
+                                Error = 'Red'
+                                Warning = 'Yellow'
+                                Information = 'Cyan'
+                                Debug = 'White'
+                                Verbose = 'White'
                             }
 
 $_defaultCategoryInfo = @{
@@ -45,8 +45,8 @@ $_defaultCategoryInfo = @{
                     }
 
 $_defaultLogConfiguration = @{   
-                                LogLevel = 'Debug'
-								MessageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {Message}'
+                                LogLevel = 'INFORMATION'
+								MessageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
                                 WriteToHost = $True
                                 HostTextColor = $_defaultHostTextColor
                                 LogFile = @{
@@ -1244,6 +1244,14 @@ function Set-LogConfiguration
         [string]$MessageFormat,
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        $CategoryInfoItem,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        $CategoryInfoKeyToRemove,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
         [ValidateNotNull()]
         [Hashtable]$HostTextColorConfiguration, 
 
@@ -1265,19 +1273,7 @@ function Set-LogConfiguration
         
         [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
         [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$VerboseTextColor,        
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$SuccessTextColor,         
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$FailureTextColor,         
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$PartialFailureTextColor
+        [string]$VerboseTextColor
     )
 
     if ($LogConfiguration -ne $Null)
@@ -1347,6 +1343,23 @@ function Set-LogConfiguration
         Private_SetMessageFormat $MessageFormat
     }
 
+    if ($CategoryInfoItem)
+    {
+        if (-not $script:_logConfiguration.ContainsKey('CategoryInfo'))
+        {
+            $script:_logConfiguration.CategoryInfo = @{}
+        }
+
+        if ($CategoryInfoItem -is [array])
+        {
+            
+            $key = $CategoryInfoItem[0]
+            $value = $CategoryInfoItem[1]
+
+            $script:_logConfiguration.CategoryInfo[$ky] = $value
+        }
+    }
+
     if ($HostTextColorConfiguration -ne $Null)
     {
         $script:_logConfiguration.HostTextColor = $HostTextColorConfiguration
@@ -1376,21 +1389,6 @@ function Set-LogConfiguration
     {
         Private_SetConfigTextColor -ConfigurationKey "Verbose" -ColorName $VerboseTextColor
     }
-
-    if (![string]::IsNullOrWhiteSpace($SuccessTextColor))
-    {
-        Private_SetConfigTextColor -ConfigurationKey "Success" -ColorName $SuccessTextColor
-    }
-
-    if (![string]::IsNullOrWhiteSpace($FailureTextColor))
-    {
-        Private_SetConfigTextColor -ConfigurationKey "Failure" -ColorName $FailureTextColor
-    }
-
-    if (![string]::IsNullOrWhiteSpace($PartialFailureTextColor))
-    {
-        Private_SetConfigTextColor -ConfigurationKey "PartialFailure" -ColorName $PartialFailureTextColor
-    }
 }
 
 <#
@@ -1399,6 +1397,15 @@ Resets the log configuration to the default settings.
 
 .DESCRIPTION    
 Resets the log configuration to the default settings. 
+    
+.LINK
+Write-LogMessage
+
+.LINK
+Get-LogConfiguration
+
+.LINK
+Set-LogConfiguration
 #>
 function Reset-LogConfiguration()
 {
@@ -1476,7 +1483,7 @@ function Private_GetAbsolutePath (
 {
     if (-not (Test-Path $Path -IsValid))
     {
-        throw [System.ArgumentException] "Invalid file path: '$Path'"
+        throw [ArgumentException] "Invalid file path: '$Path'"
     }
 
     if ([System.IO.Path]::IsPathRooted($Path))
@@ -1683,6 +1690,84 @@ function Private_SetConfigTextColor([string]$ConfigurationKey, [string]$ColorNam
     $script:_logConfiguration.HostTextColor[$ConfigurationKey] = $ColorName
 }
 
+<#
+.SYNOPSIS
+Function called by ValidateScript to check if the value passed to parameter -CategoryInfoItem 
+is valid.
+
+.DESCRIPTION
+Checks whether the parameter is either a hash table or an array of two elements, the second of 
+which is a hash table.  If the parameter meets these criteria this function returns $True.  If 
+the parameter doesn't meet the criteria the function throws an exception rather than returning 
+$False.  
+
+.NOTES        
+Throwing an exception allows us to specify a custom error message.  If the function simply 
+returned $False PowerShell would generate a standard error message that would not indicate why 
+the validation failed.
+#>
+function Private_ValidateCategoryInfoItem (
+	[Parameter(Mandatory=$True)]
+	$CategoryInfoItem
+	)
+{	
+    if ($CategoryInfoItem -is [array])
+    {
+        if ($CategoryInfoItem.Count -ne 2)
+        {
+            throw [ArgumentException]::new( `
+                "Expected an array of 2 elements but $($CategoryInfoItem.Count) supplied.", 
+                'CategoryInfoItem')
+        }
+                        
+        $key = $CategoryInfoItem[0]
+        $value = $CategoryInfoItem[1]
+
+        if (-not ($key -is [string]))
+        {
+            throw [ArgumentException]::new( `
+                "Expected first element to be a string but it is $($key.GetType().FullName).", 
+                'CategoryInfoItem')
+        }
+
+        if (-not ($value -is [hashtable]))
+        {
+            throw [ArgumentException]::new( `
+                "Expected second element to be a hashtable but it is $($value.GetType().FullName).", 
+                'CategoryInfoItem')
+        }
+
+        return $True
+    }
+
+    if ($CategoryInfoItem -is [hashtable]) 
+    {
+        foreach($key in $CategoryInfoItem.Keys)
+        {
+            if (-not ($key -is [string]))
+            {
+                throw [ArgumentException]::new( `
+                    "Expected key to be a string but it is $($key.GetType().FullName).", 
+                    'CategoryInfoItem')
+            }
+
+            $value = $CategoryInfoItem[$key]
+            if (-not ($value -is [hashtable]))
+            {
+                throw [ArgumentException]::new( `
+                    "Expected value to be a hashtable but it is $($value.GetType().FullName).", 
+                    'CategoryInfoItem')
+            }
+        }
+
+        return $True
+    }
+
+    throw [ArgumentException]::new( `
+        "Expected argument to be either a hashtable or an array but it is $($CategoryInfoItem.GetType().FullName).",
+        'CategoryInfoItem')
+}
+
 #endregion
 
 #region Private Functions Shared by Logging and Configuration Functions ***************************
@@ -1714,7 +1799,7 @@ function Private_ValidateSwitchParameterGroup (
 	# Could use ".Where{$_}" but ".Where{$_ -eq $True}" is easier to understand.
 	if ($SwitchList.Where{$_ -eq $True}.Count -gt 1)
 	{
-		throw [System.ArgumentException] $ErrorMessage
+		throw [ArgumentException] $ErrorMessage
 	}
 }
 
@@ -1740,13 +1825,13 @@ function Private_ValidateHostColor (
 	[string]$ColorToTest
 	)
 {	
-    $validColors = @("Black", "DarkBlue", "DarkGreen", "DarkCyan", "DarkRed", "DarkMagenta", 
-            "DarkYellow", "Gray", "DarkGray", "Blue", "Green", "Cyan", "Red", "Magenta", 
-            "Yellow", "White")
+    $validColors = @('Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
+        'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
+        'Red', 'Magenta', 'Yellow', 'White')
 	
 	if ($validColors -notcontains $ColorToTest)
 	{
-		throw [System.ArgumentException] "INVALID TEXT COLOR ERROR: '$ColorToTest' is not a valid text color for the PowerShell host."
+		throw [ArgumentException] "INVALID TEXT COLOR ERROR: '$ColorToTest' is not a valid text color for the PowerShell host."
 	}
 			
 	return $True
@@ -1785,7 +1870,7 @@ function Private_ValidateLogLevel (
 	
 	if ($validLevels -notcontains $LevelToTest)
 	{
-		throw [System.ArgumentException] "INVALID LOG LEVEL ERROR: '$LevelToTest' is not a valid log level."
+		throw [ArgumentException] "INVALID LOG LEVEL ERROR: '$LevelToTest' is not a valid log level."
 	}
 			
 	return $True
