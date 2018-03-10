@@ -499,7 +499,7 @@ function Write-LogMessage
     }
 
     $configuredCategories = @{}
-    if ($script:_logConfiguration.ContainsKey('Category'))
+    if ($script:_logConfiguration.ContainsKey('CategoryInfo'))
     {
         $configuredCategories = $script:_logConfiguration.CategoryInfo
     }

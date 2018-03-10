@@ -634,7 +634,7 @@ InModuleScope Prog {
 
             It '-Category colour overrides the colour determined by -MessageLevel' {
                 $textColour = 'DarkRed'
-                $script:_logConfiguration.Category.Success.Color = $textColour
+                $script:_logConfiguration.CategoryInfo.Success.Color = $textColour
                 $script:_logConfiguration.HostTextColor.Information = 'DarkCyan'
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -MessageLevel 'INFORMATION' `
@@ -645,7 +645,7 @@ InModuleScope Prog {
 
             It '-Category colour overrides the colour determined by a Message Level switch' {
                 $textColour = 'DarkRed'
-                $script:_logConfiguration.Category.Success.Color = $textColour
+                $script:_logConfiguration.CategoryInfo.Success.Color = $textColour
                 $script:_logConfiguration.HostTextColor.Information = 'DarkCyan'
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -IsInformation `
@@ -1045,7 +1045,7 @@ InModuleScope Prog {
             }
             
             It 'writes empty string when -MessageFormat contains only {Category} field and -Category not specified and no default category' {
-                $script:_logConfiguration.Category.Progress.IsDefault = $False
+                $script:_logConfiguration.CategoryInfo.Progress.IsDefault = $False
                 TestMessageFormat `
                     -ExpectedLoggedText '' `
                     -FunctionUnderTest `
