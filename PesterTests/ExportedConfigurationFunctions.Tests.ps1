@@ -192,11 +192,33 @@ InModuleScope Prog {
                             Information = "DarkYellow"
                             Debug = "DarkYellow"
                             Verbose = "DarkYellow"
-                            Success = "DarkYellow"
-                            Failure = "DarkYellow"
-                            PartialFailure = "DarkYellow"
                         }
         return $hostTextColor
+    }
+
+    function GetDefaultCategoryInfo()
+    {
+        $categoryInfo = Private_DeepCopyHashTable $script:_defaultLogConfiguration.CategoryInfo
+        return $categoryInfo
+    }
+
+    function GetNewCategoryInfo()
+    {
+        $categoryInfo = GetDefaultCategoryInfo
+        $categoryInfo.Remove('Progress')
+        $categoryInfo.FileCopy = @{Color = 'DarkCyan'}
+        return $categoryInfo                     
+    }
+
+    function GetNewLogFileInfo()
+    {
+        $logFileInfo = @{
+                            Name = 'C:\Test\Test.txt'
+                            IncludeDateInFileName = $False
+                            Overwrite = $False
+                        }
+
+        return $logFileInfo
     }
 
     # Gets a configuration hashtable where every setting is different from the defaults.
@@ -204,14 +226,17 @@ InModuleScope Prog {
     {
         $logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
         $logConfiguration.LogLevel = "Verbose"
-        $logConfiguration.LogFileName = "C:\Test\Test.txt"
-        $logConfiguration.IncludeDateInFileName = $False
-        $logConfiguration.OverwriteLogFile = $False
         $logConfiguration.WriteToHost = $False
-        $logConfiguration.MessageFormat = "{LogLevel} | {Message}"
+        $logConfiguration.MessageFormat = "{MessageLevel} | {Message}"
         
+        $logFileInfo = GetNewLogFileInfo
+        $logConfiguration.LogFile = $logFileInfo
+
         $hostTextColor = GetNewConfigurationColour
         $logConfiguration.HostTextColor = $hostTextColor
+
+        $categoryInfo = GetNewCategoryInfo
+        $logConfiguration.CategoryInfo = $categoryInfo
 
         return $logConfiguration
     }
@@ -228,9 +253,9 @@ InModuleScope Prog {
     function GetNewMessageFormatInfo ()
     {
         $messageFormatInfo = @{
-                                RawFormat = '{LogLevel} | {Message}'
-                                WorkingFormat = '${LogLevel} | ${Message}'
-                                FieldsPresent = @('Message', 'LogLevel')
+                                RawFormat = '{MessageLevel} | {Message}'
+                                WorkingFormat = '${MessageLevel} | ${Message}'
+                                FieldsPresent = @('Message', 'MessageLevel')
                             }
         return $messageFormatInfo
     }
@@ -239,9 +264,9 @@ InModuleScope Prog {
     function GetDefaultMessageFormatInfo ()
     {
         $messageFormatInfo = @{
-                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageType} | {Message}'
-                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageType} | ${Message}'
-                                FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageType')
+                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
+                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
+                                FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel', 'Category')
                             }
         return $messageFormatInfo
     }
@@ -371,35 +396,36 @@ InModuleScope Prog {
                 -HashTableToTest $logConfiguration
         } 
 
-        It 'returns a copy of current configuration if current configuration hashtable is populated' {
-            $script:_logConfiguration.Keys.Count | Should -BeGreaterThan 6
+        It 'returns the current configuration if current configuration hashtable is populated' {
+            $script:_logConfiguration.Keys.Count | Should -Be 6
 
             $logConfiguration = Get-LogConfiguration
-            
-            AssertHashTablesMatch -ReferenceHashTable $script:_logConfiguration `
-                -HashTableToTest $logConfiguration
+
+            $logConfiguration | Should -Be $script:_logConfiguration
         }  
 
-        It 'returns a static copy of current configuration, which does not reflect subsequent changes to configuration' {
+        It 'returns a reference to the current configuration, where changes to the returned hashtable are reflected in the configuration' {
             $script:_logConfiguration.HostTextColor.Error = 'Blue'
             $script:_logConfiguration.HostTextColor.Error | Should -Be 'Blue'
 
-            $logConfiguration = Get-LogConfiguration
+            $localLogConfiguration = Get-LogConfiguration
+            
+            $localLogConfiguration.HostTextColor.Error = 'White'
+            $localLogConfiguration.HostTextColor.Error | Should -Be 'White'
+
+            $script:_logConfiguration.HostTextColor.Error | Should -Be 'White'
+        }   
+
+        It 'returns a reference to the current configuration, where the returned hashtable reflects subsequent changes to the configuration' {
+            $script:_logConfiguration.HostTextColor.Error = 'Blue'
+            $script:_logConfiguration.HostTextColor.Error | Should -Be 'Blue'
+
+            $localLogConfiguration = Get-LogConfiguration
             
             $script:_logConfiguration.HostTextColor.Error = 'White'
             $script:_logConfiguration.HostTextColor.Error | Should -Be 'White'
 
-            $logConfiguration.HostTextColor.Error | Should -Be 'Blue'
-        }  
-
-        It 'returns a static copy of current configuration, where subsequent changes to the copy are not reflected in the configuration' {
-            $script:_logConfiguration.HostTextColor.Error = 'Red'
-
-            $logConfiguration = Get-LogConfiguration
-            $logConfiguration.HostTextColor.Error = 'Blue'
-            $logConfiguration.HostTextColor.Error | Should -Be 'Blue'
-
-            $script:_logConfiguration.HostTextColor.Error | Should -Be 'Red'
+            $localLogConfiguration.HostTextColor.Error | Should -Be 'White'
         } 
     }
 
@@ -442,17 +468,17 @@ InModuleScope Prog {
                 $script:_logFilePath | Should -Be $newLogFilePath
             }
 
-            It 'includes date stamp in LogFilePath if new configuration IncludeDateInFileName set' {
+            It 'includes date stamp in LogFilePath if new configuration LogFile.IncludeDateInFileName set' {
 
                 $newConfiguration = GetNewConfiguration
-                $newConfiguration.IncludeDateInFileName = $True
+                $newConfiguration.LogFile.IncludeDateInFileName = $True
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logFilePath | Should -Be $newLogFilePath
             }
 
-            It 'clears LogFileOverwritten if configuration LogFileName changed' {
+            It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
                 $script:_logFileOverwritten = $True
 
                 $newConfiguration = GetNewConfiguration
@@ -461,9 +487,9 @@ InModuleScope Prog {
                 $script:_logFileOverwritten | Should -Be $False
             }
 
-            It 'does not clear LogFileOverwritten if configuration LogFileName unchanged' {
+            It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
@@ -508,10 +534,10 @@ InModuleScope Prog {
 
         Context 'Parameter LogFileName' {
             BeforeEach {     
-                $script:_logConfiguration.LogFileName = 'Text.log'
+                $script:_logConfiguration.LogFile.Name = 'Text.log'
             }
 
-            It 'sets configuration LogFileName as a member of parameter set "IndividualSettings_AllColors"' {
+            It 'sets configuration LogFile.Name as a member of parameter set "IndividualSettings_AllColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                 $newHostTextColours = GetNewConfigurationColour
 
@@ -519,23 +545,23 @@ InModuleScope Prog {
                     -HostTextColorConfiguration $newHostTextColours
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.LogFileName | Should -Be New.test
+                $script:_logConfiguration.LogFile.Name | Should -Be New.test
             }
 
-            It 'sets configuration LogFileName as a member of parameter set "IndividualSettings_IndividualColors"' {
+            It 'sets configuration LogFile.Name as a member of parameter set "IndividualSettings_IndividualColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                                 
                 Set-LogConfiguration -LogFileName New.test -ErrorTextColor DarkYellow
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.LogFileName | Should -Be New.test
+                $script:_logConfiguration.LogFile.Name | Should -Be New.test
             }
 
-            It 'sets configuration LogFileName as a member of the default parameter set' {
+            It 'sets configuration LogFile.Name as a member of the default parameter set' {
                                 
                 Set-LogConfiguration -LogFileName New.test 
                     
-                $script:_logConfiguration.LogFileName | Should -Be New.test
+                $script:_logConfiguration.LogFile.Name | Should -Be New.test
             }
 
             It 'throws ArgumentException if attempt to set LogFileName to an invalid path' {
@@ -553,27 +579,27 @@ InModuleScope Prog {
                 $script:_logFilePath | Should -Be $newLogFilePath
             }
 
-            It 'includes date stamp in LogFilePath if IncludeDateInFileName set' {
+            It 'includes date stamp in LogFilePath if LogFile.IncludeDateInFileName set' {
 
                 $newConfiguration = GetNewConfiguration
-                $newConfiguration.IncludeDateInFileName = $True
+                $newConfiguration.LogFile.IncludeDateInFileName = $True
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logFilePath | Should -Be $newLogFilePath
             }
 
-            It 'does not include date stamp in LogFilePath if IncludeDateInFileName cleared' {
+            It 'does not include date stamp in LogFilePath if LogFile.IncludeDateInFileName cleared' {
 
                 $newConfiguration = GetNewConfiguration
-                $newConfiguration.IncludeDateInFileName = $False
+                $newConfiguration.LogFile.IncludeDateInFileName = $False
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
                 $script:_logFilePath | Should -Be $newLogFilePath
             }
 
-            It 'clears LogFileOverwritten if configuration LogFileName changed' {
+            It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
                 $script:_logFileOverwritten = $True
 
                 $newConfiguration = GetNewConfiguration
@@ -582,9 +608,9 @@ InModuleScope Prog {
                 $script:_logFileOverwritten | Should -Be $False
             }
 
-            It 'does not clear LogFileOverwritten if configuration LogFileName unchanged' {
+            It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
@@ -596,10 +622,10 @@ InModuleScope Prog {
 
         Context 'Parameter IncludeDateInFileName' {
             BeforeEach {   
-                $script:_logConfiguration.IncludeDateInFileName = $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
             }
 
-            It 'sets configuration IncludeDateInFileName as a member of parameter set "IndividualSettings_AllColors"' {
+            It 'sets configuration LogFile.IncludeDateInFileName as a member of parameter set "IndividualSettings_AllColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                 $newHostTextColours = GetNewConfigurationColour
 
@@ -607,30 +633,30 @@ InModuleScope Prog {
                     -HostTextColorConfiguration $newHostTextColours
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $True
             }
 
-            It 'sets configuration IncludeDateInFileName as a member of parameter set "IndividualSettings_IndividualColors"' {
+            It 'sets configuration LogFile.IncludeDateInFileName as a member of parameter set "IndividualSettings_IndividualColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                                 
                 Set-LogConfiguration -IncludeDateInFileName -ErrorTextColor DarkYellow
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $True
             }
 
-            It 'sets configuration IncludeDateInFileName as a member of the default parameter set' {
+            It 'sets configuration LogFile.IncludeDateInFileName as a member of the default parameter set' {
                                 
                 Set-LogConfiguration -IncludeDateInFileName
                     
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $True
             }
 
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath
-                $script:_logConfiguration.IncludeDateInFileName = $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -IncludeDateInFileName
 
@@ -639,9 +665,9 @@ InModuleScope Prog {
 
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logConfiguration.IncludeDateInFileName = $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -IncludeDateInFileName
 
@@ -651,7 +677,7 @@ InModuleScope Prog {
 
         Context 'Parameter ExcludeDateFromFileName' {
             BeforeEach {              
-                $script:_logConfiguration.IncludeDateInFileName = $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
             }
 
             It 'sets configuration ExcludeDateFromFileName as a member of parameter set "IndividualSettings_AllColors"' {
@@ -662,7 +688,7 @@ InModuleScope Prog {
                     -HostTextColorConfiguration $newHostTextColours
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $False
             }
 
             It 'sets configuration ExcludeDateFromFileName as a member of parameter set "IndividualSettings_IndividualColors"' {
@@ -671,21 +697,21 @@ InModuleScope Prog {
                 Set-LogConfiguration -ExcludeDateFromFileName -ErrorTextColor DarkYellow
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $False
             }
 
             It 'sets configuration ExcludeDateFromFileName as a member of the default parameter set' {
                                 
                 Set-LogConfiguration -ExcludeDateFromFileName
                     
-                $script:_logConfiguration.IncludeDateInFileName | Should -Be $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName | Should -Be $False
             }
 
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logConfiguration.IncludeDateInFileName = $True
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -ExcludeDateFromFileName
 
@@ -694,9 +720,9 @@ InModuleScope Prog {
 
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
-                $script:_logConfiguration.LogFileName = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logFilePath = GetNewLogFilePath
-                $script:_logConfiguration.IncludeDateInFileName = $False
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -ExcludeDateFromFileName
 
@@ -704,12 +730,12 @@ InModuleScope Prog {
             }
         }
 
-        Context 'Parameter OverwriteLogFile' {
+        Context 'Parameter LogFileOverwrite' {
             BeforeEach {    
-                $script:_logConfiguration.OverwriteLogFile = $False
+                $script:_logConfiguration.LogFile.Overwrite = $False
             }
 
-            It 'sets configuration OverwriteLogFile as a member of parameter set "IndividualSettings_AllColors"' {
+            It 'sets configuration LogFile.Overwrite as a member of parameter set "IndividualSettings_AllColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                 $newHostTextColours = GetNewConfigurationColour
 
@@ -717,29 +743,29 @@ InModuleScope Prog {
                     -HostTextColorConfiguration $newHostTextColours
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $True
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $True
             }
 
-            It 'sets configuration OverwriteLogFile as a member of parameter set "IndividualSettings_IndividualColors"' {
+            It 'sets configuration LogFile.Overwrite as a member of parameter set "IndividualSettings_IndividualColors"' {
                 $script:_logConfiguration.HostTextColor.Error = 'Red'
                                 
                 Set-LogConfiguration -OverwriteLogFile -ErrorTextColor DarkYellow
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $True
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $True
             }
 
-            It 'sets configuration OverwriteLogFile as a member of the default parameter set' {
+            It 'sets configuration LogFile.Overwrite as a member of the default parameter set' {
                                 
                 Set-LogConfiguration -OverwriteLogFile
                     
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $True
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $True
             }
         }
 
         Context 'Parameter AppendToLogFile' {
             BeforeEach {                
-                $script:_logConfiguration.OverwriteLogFile = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
             }
 
             It 'sets configuration AppendToLogFile as a member of parameter set "IndividualSettings_AllColors"' {
@@ -750,7 +776,7 @@ InModuleScope Prog {
                     -HostTextColorConfiguration $newHostTextColours
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $False
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $False
             }
 
             It 'sets configuration AppendToLogFile as a member of parameter set "IndividualSettings_IndividualColors"' {
@@ -759,14 +785,14 @@ InModuleScope Prog {
                 Set-LogConfiguration -AppendToLogFile -ErrorTextColor DarkYellow
                     
                 $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $False
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $False
             }
 
             It 'sets configuration AppendToLogFile as a member of the default parameter set' {
                                 
                 Set-LogConfiguration -AppendToLogFile
                     
-                $script:_logConfiguration.OverwriteLogFile | Should -Be $False
+                $script:_logConfiguration.LogFile.Overwrite | Should -Be $False
             }
         }
 
@@ -878,6 +904,173 @@ InModuleScope Prog {
             }
         }
 
+        Context 'Parameter CategoryInfoItem' {
+            BeforeEach {                
+                $script:_logConfiguration.CategoryInfo = @{
+                                                            Progress = @{ IsDefault = $True }
+                                                            Success = @{ Color = 'Green' }
+                                                            Failure = @{ Color = 'Red' }
+                                                            PartialFailure = @{ Color = 'Yellow' }
+                                                        }
+            }
+
+            It 'updates the value of an existing CategoryInfo item when a tuple is supplied' {
+                
+                Set-LogConfiguration -CategoryInfoItem Success, @{ Color = 'DarkGreen' }
+
+                $script:_logConfiguration.CategoryInfo.Success.Color | Should -Be 'DarkGreen'
+            }
+
+            It 'adds a new CategoryInfo item when a tuple is supplied which does not match any existing item' {
+                
+                Set-LogConfiguration -CategoryInfoItem Blue, @{ Color = 'Blue' }
+
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+            }
+
+            It 'removes existing CategoryInfo item IsDefault property when a tuple is supplied which has an IsDefault property' {
+                
+                Set-LogConfiguration -CategoryInfoItem Blue, @{ IsDefault = $True }
+
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.IsDefault | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Progress.ContainsKey('IsDefault') | Should -Be $False
+            }
+
+            It 'creates the CategoryInfo hashtable when CategoryInfo does not exist and a tuple is supplied' {
+                $script:_logConfiguration.CategoryInfo = $Null
+
+                Set-LogConfiguration -CategoryInfoItem Blue, @{ Color = 'Blue' }
+
+                ($script:_logConfiguration.CategoryInfo -is [hashtable]) | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 1
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+            }
+
+            It 'updates the value of an existing CategoryInfo item when a single-item hashtable is supplied' {
+                
+                Set-LogConfiguration -CategoryInfoItem @{ Success = @{ Color = 'DarkGreen' } }
+
+                $script:_logConfiguration.CategoryInfo.Success.Color | Should -Be 'DarkGreen'
+            }
+
+            It 'adds a new CategoryInfo item when a single-item hashtable is supplied which does not match any existing item' {
+                
+                Set-LogConfiguration -CategoryInfoItem @{ Blue = @{ Color = 'Blue' } }
+
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+            }
+
+            It 'removes existing CategoryInfo item IsDefault property when a single-item hashtable is supplied which has an IsDefault property' {
+                
+                Set-LogConfiguration -CategoryInfoItem @{ Blue = @{ IsDefault = $True } }
+
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.IsDefault | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Progress.ContainsKey('IsDefault') | Should -Be $False
+            }
+
+            It 'creates the CategoryInfo hashtable when CategoryInfo does not exist and a single-item hashtable is supplied' {
+                $script:_logConfiguration.CategoryInfo = $Null
+
+                Set-LogConfiguration -CategoryInfoItem @{ Blue = @{ Color = 'Blue' } }
+
+                ($script:_logConfiguration.CategoryInfo -is [hashtable]) | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 1
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+            }
+
+            It 'updates the value of multiple existing CategoryInfo items when a multi-item hashtable is supplied' {
+                
+                Set-LogConfiguration -CategoryInfoItem @{ 
+                                                        Success = @{ Color = 'DarkGreen' }                                                         
+                                                        Failure = @{ Color = 'DarkRed' }
+                                                        }
+
+                $script:_logConfiguration.CategoryInfo.Success.Color | Should -Be 'DarkGreen'
+                $script:_logConfiguration.CategoryInfo.Failure.Color | Should -Be 'DarkRed'
+            }
+
+            It 'adds multiple new CategoryInfo items when a multi-item hashtable is supplied which does not match any existing item' {
+                
+                Set-LogConfiguration -CategoryInfoItem @{ 
+                                                        Blue = @{ Color = 'Blue' } 
+                                                        Yellow = @{ Color = 'Yellow' } 
+                                                        }
+
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Yellow') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Yellow.Color | Should -Be 'Yellow'
+            }
+
+            It 'creates the CategoryInfo hashtable when CategoryInfo does not exist and a multi-item hashtable is supplied' {
+                $script:_logConfiguration.CategoryInfo = $Null
+
+                Set-LogConfiguration -CategoryInfoItem @{ 
+                                                        Blue = @{ Color = 'Blue' } 
+                                                        Yellow = @{ Color = 'Yellow' } 
+                                                        }
+
+                ($script:_logConfiguration.CategoryInfo -is [hashtable]) | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 2
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Blue') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Blue.Color | Should -Be 'Blue'
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Yellow') | Should -Be $True
+                $script:_logConfiguration.CategoryInfo.Yellow.Color | Should -Be 'Yellow'
+            }
+        }
+
+        Context 'Parameter CategoryInfoKeyToRemove' {
+            BeforeEach {                
+                $script:_logConfiguration.CategoryInfo = @{
+                                                            Progress = @{ IsDefault = $True }
+                                                            Success = @{ Color = 'Green' }
+                                                            Failure = @{ Color = 'Red' }
+                                                            PartialFailure = @{ Color = 'Yellow' }
+                                                        }
+            }
+
+            It 'has no effect if the supplied keys do not exist in the CategoryInfo hashtable' {
+                
+                Set-LogConfiguration -CategoryInfoKeyToRemove Blue,Yellow
+
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 4
+                $referenceHashtable = @{
+                                            Progress = @{ IsDefault = $True }
+                                            Success = @{ Color = 'Green' }
+                                            Failure = @{ Color = 'Red' }
+                                            PartialFailure = @{ Color = 'Yellow' }
+                                        }
+                AssertHashTablesMatch -ReferenceHashTable $referenceHashtable `
+                    -HashtableToTest $script:_logConfiguration.CategoryInfo
+            }
+
+            It 'removes the key from the CategoryInfo hashtable if a single key is supplied' {
+                
+                Set-LogConfiguration -CategoryInfoKeyToRemove PartialFailure
+
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 3
+                $script:_logConfiguration.CategoryInfo.ContainsKey('PartialFailure') | 
+                    Should -Be $False
+            }
+
+            It 'removes multiple keys from the CategoryInfo hashtable if multiple keys are supplied' {
+                
+                Set-LogConfiguration -CategoryInfoKeyToRemove Progress,PartialFailure
+
+                $script:_logConfiguration.CategoryInfo.Keys.Count | Should -Be 2
+                $script:_logConfiguration.CategoryInfo.ContainsKey('Progress') | 
+                    Should -Be $False
+                $script:_logConfiguration.CategoryInfo.ContainsKey('PartialFailure') | 
+                    Should -Be $False
+            }
+        }
+
         Context 'Parameter set "IndividualSettings_AllColors"' {
 
             It 'sets configuration HostTextColor hashtable via HostTextColorConfiguration parameter' {
@@ -939,30 +1132,6 @@ InModuleScope Prog {
                     
                 $script:_logConfiguration.HostTextColor.Verbose | Should -Be Blue
             }
-
-            It 'sets HostTextColor Success via parameter SuccessTextColor' {
-                $script:_logConfiguration.HostTextColor.Success = 'Red'
-
-                Set-LogConfiguration -SuccessTextColor Blue
-                    
-                $script:_logConfiguration.HostTextColor.Success | Should -Be Blue
-            }
-
-            It 'sets HostTextColor Failure via parameter FailureTextColor' {
-                $script:_logConfiguration.HostTextColor.Failure = 'Red'
-
-                Set-LogConfiguration -FailureTextColor Blue
-                    
-                $script:_logConfiguration.HostTextColor.Failure | Should -Be Blue
-            }
-
-            It 'sets HostTextColor PartialFailure via parameter PartialFailureTextColor' {
-                $script:_logConfiguration.HostTextColor.PartialFailure = 'Red'
-
-                Set-LogConfiguration -PartialFailureTextColor Blue
-                    
-                $script:_logConfiguration.HostTextColor.PartialFailure | Should -Be Blue
-            }
         }
 
         Context 'Multiple parameters set simultaneously' {
@@ -971,11 +1140,11 @@ InModuleScope Prog {
 
                 Set-LogConfiguration -LogLevel Verbose -LogFileName 'C:\Test\Test.txt' `
                     -ExcludeDateFromFileName -AppendToLogFile -WriteToStreams `
-                    -MessageFormat '{LogLevel} | {Message}' -ErrorTextColor DarkYellow `
+                    -MessageFormat '{MessageLevel} | {Message}' `
+                    -CategoryInfoItem 'FileCopy', @{Color = 'DarkCyan'} `
+                    -CategoryInfoKeyToRemove 'Progress' -ErrorTextColor DarkYellow `
                     -WarningTextColor DarkYellow -InformationTextColor DarkYellow `
-                    -DebugTextColor DarkYellow -VerboseTextColor DarkYellow `
-                    -SuccessTextColor DarkYellow -FailureTextColor DarkYellow `
-                    -PartialFailureTextColor DarkYellow
+                    -DebugTextColor DarkYellow -VerboseTextColor DarkYellow
 
                 $referenceLogConfiguration = GetNewConfiguration
                 $referenceMessageFormatInfo = GetNewMessageFormatInfo
@@ -1060,8 +1229,8 @@ InModuleScope Prog {
             $script:_logFilePath | Should -Be $defaultLogFilePath
         }
 
-        It 'clears LogFileOverwritten if configuration LogFileName changed' {
-            $script:_logConfiguration.LogFileName = GetNewLogFilePath
+        It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
+            $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
             $script:_logFileOverwritten = $True
 
             Reset-LogConfiguration
@@ -1069,8 +1238,8 @@ InModuleScope Prog {
             $script:_logFileOverwritten | Should -Be $False
         }
 
-        It 'does not clear LogFileOverwritten if configuration LogFileName unchanged' {
-            $script:_logConfiguration.LogFileName = $script:_defaultLogConfiguration.LogFileName
+        It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
+            $script:_logConfiguration.LogFile.Name = $script:_defaultLogConfiguration.LogFile.Name
             $script:_logFilePath = GetDefaultLogFilePath
             $script:_logFileOverwritten = $True
 

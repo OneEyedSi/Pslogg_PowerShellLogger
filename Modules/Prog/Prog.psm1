@@ -723,8 +723,8 @@ A hash table with the following keys:
 
     WriteToHost: If $True then all log messages will be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
-        written to the error stream, Warning messages will be written to the warning stream, etc.  
-        The stream for Success, Failure and PartialFailure messages is the information stream.  
+        written to the error stream, Warning messages will be written to the warning stream, etc. 
+
         The default value is $True;
 		
 	MessageFormat: A string that sets the format of log messages.  
@@ -1302,30 +1302,30 @@ function Set-LogConfiguration
 
     if (![string]::IsNullOrWhiteSpace($LogFileName))
     {
-        $script:_logConfiguration.LogFileName = $LogFileName
+        $script:_logConfiguration.LogFile.Name = $LogFileName
         Private_SetLogFilePath
     }
 
     if ($ExcludeDateFromFileName.IsPresent)
     {
-        $script:_logConfiguration.IncludeDateInFileName = $False
+        $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
         Private_SetLogFilePath
     }
 
     if ($IncludeDateInFileName.IsPresent)
     {
-        $script:_logConfiguration.IncludeDateInFileName = $True
+        $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
         Private_SetLogFilePath
     }
 
     if ($AppendToLogFile.IsPresent)
     {
-        $script:_logConfiguration.OverwriteLogFile = $False
+        $script:_logConfiguration.LogFile.Overwrite = $False
     }
 
     if ($OverwriteLogFile.IsPresent)
     {
-        $script:_logConfiguration.OverwriteLogFile = $True
+        $script:_logConfiguration.LogFile.Overwrite = $True
     }
 
     if ($WriteToStreams.IsPresent)
@@ -1345,18 +1345,37 @@ function Set-LogConfiguration
 
     if ($CategoryInfoItem)
     {
-        if (-not $script:_logConfiguration.ContainsKey('CategoryInfo'))
+        if (-not $script:_logConfiguration.ContainsKey('CategoryInfo') `
+        -or (-not $script:_logConfiguration.CategoryInfo))
         {
             $script:_logConfiguration.CategoryInfo = @{}
         }
 
         if ($CategoryInfoItem -is [array])
-        {
-            
+        {            
             $key = $CategoryInfoItem[0]
             $value = $CategoryInfoItem[1]
 
-            $script:_logConfiguration.CategoryInfo[$ky] = $value
+            Private_SetCategoryInfoItem `
+                -CategoryInfoHashtable $script:_logConfiguration.CategoryInfo `
+                -Key $key -Value $value
+        }
+        elseif ($CategoryInfoItem -is [hashtable])
+        {
+            foreach($key in $CategoryInfoItem.Keys)
+            {
+                 Private_SetCategoryInfoItem `
+                    -CategoryInfoHashtable $script:_logConfiguration.CategoryInfo `
+                    -Key $key -Value $CategoryInfoItem[$key]
+            }
+        }
+    }
+
+    if ($CategoryInfoKeyToRemove -and $script:_logConfiguration.CategoryInfo)
+    {
+        foreach($key in $CategoryInfoKeyToRemove)
+        {
+            $script:_logConfiguration.CategoryInfo.Remove($key)
         }
     }
 
@@ -1766,6 +1785,38 @@ function Private_ValidateCategoryInfoItem (
     throw [ArgumentException]::new( `
         "Expected argument to be either a hashtable or an array but it is $($CategoryInfoItem.GetType().FullName).",
         'CategoryInfoItem')
+}
+
+<#
+.SYNOPSIS
+Sets a configuration CategoryInfo item.
+
+.DESCRIPTION
+The item to set is specified via the -Key and -Value parameters.  If the value hashtable contains 
+an IsDefault key then any existing value hashtable with an IsDefault key will have the key 
+removed.
+#>
+function Private_SetCategoryInfoItem (
+        [hashtable]$CategoryInfoHashtable,                
+        [string]$Key,                
+        [hashtable]$Value
+    )
+{
+    if (-not $CategoryInfoHashtable)
+    {
+        $CategoryInfoHashtable = @{}
+    }
+
+    if ($Value.ContainsKey('IsDefault') -and $Value.IsDefault -eq $True)
+    {
+        foreach ($existingKey in $CategoryInfoHashtable.Keys)
+        {
+            $existingValue = $CategoryInfoHashtable[$existingKey]
+            $existingValue.Remove('IsDefault')
+        }
+    }
+
+    $CategoryInfoHashtable[$Key] = $Value
 }
 
 #endregion
