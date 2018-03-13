@@ -1167,6 +1167,43 @@ Set the LogLevel and MessageFormat using individual parameters:
 	    -MessageFormat '{Timestamp:yyyy-MM-dd hh:mm:ss},{Category},{Message}'
 
 .EXAMPLE
+Add a single CategoryInfo item using the tuple (two-element array) syntax:
+
+    Set-LogConfiguration -CategoryInfoItem FileCopy, @{ Color = 'Blue' }
+
+.EXAMPLE
+Change the default Category using the tuple (two-element array) syntax:
+
+    Set-LogConfiguration -CategoryInfoItem FileCopy, @{ IsDefault = $True }
+
+.EXAMPLE
+Add multiple CategoryInfo items using the hash table syntax:
+
+    Set-LogConfiguration -CategoryInfoItem @{ 
+                                            FileCopy = @{ Color = 'Blue' } 
+                                            FileAdd = @{ Color = 'Yellow' } 
+                                            }
+
+If the configuration CategoryInfo hash table already includes keys 'FileCopy' and 'FileAdd' 
+the colors of those CategoryInfo items will be updated.  If the keys do not already exist 
+they will be created.
+
+.EXAMPLE
+Remove a single CategoryInfo item:
+
+    Set-LogConfiguration -CategoryInfoKeyToRemove PartialFailure
+
+The CategoryInfo item with key 'PartialFailure' will be removed, if it exists.  No error is 
+thrown if the key does not exist.
+
+.EXAMPLE
+Remove multiple CategoryInfo items:
+
+    Set-LogConfiguration -CategoryInfoKeyToRemove Progress,PartialFailure
+
+The CategoryInfo items with keys 'Progress' and 'PartialFailure' will be removed, if they exist.
+
+.EXAMPLE
 Set the text colors used by the host to display error and warning messages:
 
     Set-LogConfiguration -ErrorTextColor DarkRed -WarningTextColor DarkYellow
