@@ -396,36 +396,35 @@ InModuleScope Prog {
                 -HashTableToTest $logConfiguration
         } 
 
-        It 'returns the current configuration if current configuration hashtable is populated' {
+        It 'returns a copy of current configuration if current configuration hashtable is populated' {
             $script:_logConfiguration.Keys.Count | Should -Be 6
 
             $logConfiguration = Get-LogConfiguration
-
-            $logConfiguration | Should -Be $script:_logConfiguration
+            
+            AssertHashTablesMatch -ReferenceHashTable $script:_logConfiguration `
+                -HashTableToTest $logConfiguration
         }  
 
-        It 'returns a reference to the current configuration, where changes to the returned hashtable are reflected in the configuration' {
+        It 'returns a static copy of current configuration, which does not reflect subsequent changes to configuration' {
             $script:_logConfiguration.HostTextColor.Error = 'Blue'
             $script:_logConfiguration.HostTextColor.Error | Should -Be 'Blue'
 
-            $localLogConfiguration = Get-LogConfiguration
-            
-            $localLogConfiguration.HostTextColor.Error = 'White'
-            $localLogConfiguration.HostTextColor.Error | Should -Be 'White'
-
-            $script:_logConfiguration.HostTextColor.Error | Should -Be 'White'
-        }   
-
-        It 'returns a reference to the current configuration, where the returned hashtable reflects subsequent changes to the configuration' {
-            $script:_logConfiguration.HostTextColor.Error = 'Blue'
-            $script:_logConfiguration.HostTextColor.Error | Should -Be 'Blue'
-
-            $localLogConfiguration = Get-LogConfiguration
+            $logConfiguration = Get-LogConfiguration
             
             $script:_logConfiguration.HostTextColor.Error = 'White'
             $script:_logConfiguration.HostTextColor.Error | Should -Be 'White'
 
-            $localLogConfiguration.HostTextColor.Error | Should -Be 'White'
+            $logConfiguration.HostTextColor.Error | Should -Be 'Blue'
+        }  
+
+        It 'returns a static copy of current configuration, where subsequent changes to the copy are not reflected in the configuration' {
+            $script:_logConfiguration.HostTextColor.Error = 'Red'
+
+            $logConfiguration = Get-LogConfiguration
+            $logConfiguration.HostTextColor.Error = 'Blue'
+            $logConfiguration.HostTextColor.Error | Should -Be 'Blue'
+
+            $script:_logConfiguration.HostTextColor.Error | Should -Be 'Red'
         } 
     }
 
