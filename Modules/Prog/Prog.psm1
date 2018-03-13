@@ -820,9 +820,23 @@ A hash table with the following keys:
             Color: The text color for messages of the specified category, if they are written to 
                 the host. 
 .NOTES
-The hash table returned by Get-LogConfiguration is not a copy of the Prog configuration, it is 
-a reference to the live configuration.  This means any changes to the hash table retrieved by 
-Get-LogConfiguration will be reflected in Prog's configuration.
+The hash table returned by Get-LogConfiguration is a copy of the Prog configuration, NOT a
+reference to the live configuration.  This means any changes to the hash table retrieved by 
+Get-LogConfiguration will NOT be reflected in Prog's configuration.
+
+As a result the Prog configuration can only be updated via Set-LogConfiguration.  This ensures 
+that the Prog internal state is updated correctly.  
+
+For example, if a user were able to set the configuration MessageFormat string directly this 
+modified MessageFormat would not be used when writing log messages.  That is because 
+Set-LogConfiguration parses the new MessageFormat string and updates Prog's internal state to 
+indicate which fields are to be included in log messages.  If the configuration MessageFormat 
+string were updated directly it would not be parsed and the list of fields to include in 
+log messages would not be updated.
+
+Although updating the hash table retrieved by Get-LogConfiguration will not update the Prog 
+configuration, the updated hash table can be written back as the Prog configuration via 
+Set-LogConfiguration.  
 
 .EXAMPLE
 Get the text color for messages with category Success:
@@ -871,12 +885,13 @@ Get the format of log messages:
     {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
 
 .EXAMPLE
-Use Get-LogConfiguration to update Prog's configuration:
+Use Get-LogConfiguration and Set-LogConfiguration to update Prog's configuration:
 
     $config = Get-LogConfiguration
     $config.LogLevel = 'ERROR'
     $config.LogFile.Name = 'Error.log'
     $config.CategoryInfo['FileCopy'] = @{Color = 'DarkYellow'}
+    Set-LogConfiguration -LogConfiguration $config
     
 .LINK
 Write-LogMessage
@@ -894,7 +909,7 @@ function Get-LogConfiguration()
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
     }
-    return $script:_logConfiguration
+    return Private_DeepCopyHashTable $script:_logConfiguration
 }
 
 <#
@@ -1220,6 +1235,15 @@ Set all text colors simultaneously:
 					}
 					
 	Set-LogConfiguration -HostTextColorConfiguration $hostColors
+
+.EXAMPLE
+Use Get-LogConfiguration and Set-LogConfiguration to update Prog's configuration:
+
+    $config = Get-LogConfiguration
+    $config.LogLevel = 'ERROR'
+    $config.LogFile.Name = 'Error.log'
+    $config.CategoryInfo['FileCopy'] = @{Color = 'DarkYellow'}
+    Set-LogConfiguration -LogConfiguration $config
     
 .LINK
 Write-LogMessage
