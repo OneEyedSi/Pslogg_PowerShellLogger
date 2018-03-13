@@ -604,20 +604,21 @@ InModuleScope Prog {
                 AssertWriteHostCalled -WithTextColor $textColour
             }
 
-            It 'writes to host in Debug text colour when -WriteToHost and -IsDebug switches set, and -HostTextColor not specified' {
-                $textColour = 'DarkRed'
-                $script:_logConfiguration.HostTextColor.Debug = $textColour
-                
-                Write-LogMessage -Message 'hello world' -WriteToHost -IsDebug 
-
-                AssertWriteHostCalled -WithTextColor $textColour
-            }
-
             It 'writes to host in Information text colour when -WriteToHost and -IsInformation switches set, and -HostTextColor not specified' {
                 $textColour = 'DarkRed'
                 $script:_logConfiguration.HostTextColor.Information = $textColour
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -IsInformation 
+
+                AssertWriteHostCalled -WithTextColor $textColour
+            }
+
+            It 'writes to host in Debug text colour when -WriteToHost and -IsDebug switches set, and -HostTextColor not specified' {
+                $textColour = 'DarkRed'
+                $script:_logConfiguration.HostTextColor.Debug = $textColour
+                $script:_logConfiguration.LogLevel = 'Verbose'
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost -IsDebug 
 
                 AssertWriteHostCalled -WithTextColor $textColour
             }
