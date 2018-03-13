@@ -347,7 +347,7 @@ InModuleScope Prog {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Assert-ExceptionThrown -WithTypeName ArgumentException  `
-                    -WithMessage 'Expected argument to be either a hashtable or an array but it is System.String'
+                    -WithMessage 'Expected argument to be either a hash table or an array but it is System.String'
         }
 
         It 'throws ArgumentException if CategoryInfoItem is empty array' {
@@ -374,7 +374,7 @@ InModuleScope Prog {
                     -WithMessage 'Expected an array of 2 elements but 3 supplied'
         }
 
-        It 'throws ArgumentException if CategoryInfoItem is two-elment array where first element is not a string' {
+        It 'throws ArgumentException if CategoryInfoItem is two-element array where first element is not a string' {
             $testValue = @(1, 'text')
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
@@ -382,15 +382,15 @@ InModuleScope Prog {
                     -WithMessage 'Expected first element to be a string but it is System.Int32'
         }
 
-        It 'throws ArgumentException if CategoryInfoItem is two-elment array where second element is not a hashtable' {
+        It 'throws ArgumentException if CategoryInfoItem is two-element array where second element is not a hashtable' {
             $testValue = @('Key', 'text')
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Assert-ExceptionThrown -WithTypeName ArgumentException  `
-                    -WithMessage 'Expected second element to be a hashtable but it is System.String'
+                    -WithMessage 'Expected second element to be a hash table but it is System.String'
         }
 
-        It 'returns $True if CategoryInfoItem is two-elment array with types @([string], [hashtable])' {
+        It 'returns $True if CategoryInfoItem is two-element array with types @([string], [hashtable])' {
             $testValue = @('Key', @{})
 
             $result = Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue
@@ -434,7 +434,7 @@ InModuleScope Prog {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Assert-ExceptionThrown -WithTypeName ArgumentException  `
-                    -WithMessage 'Expected value to be a hashtable but it is System.String'
+                    -WithMessage 'Expected value to be a hash table but it is System.String'
         }
 
         It 'throws ArgumentException if CategoryInfoItem is hashtable where second value is not a hashtable' {
@@ -445,7 +445,7 @@ InModuleScope Prog {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Assert-ExceptionThrown -WithTypeName ArgumentException  `
-                    -WithMessage 'Expected value to be a hashtable but it is System.String'
+                    -WithMessage 'Expected value to be a hash table but it is System.String'
         }
 
         It 'returns $True if CategoryInfoItem is hashtable with single item of types [string]=[hashtable]' {

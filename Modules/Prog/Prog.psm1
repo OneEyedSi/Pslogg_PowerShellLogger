@@ -665,10 +665,14 @@ function Private_GetCallerName()
 
 <#
 .SYNOPSIS
-Gets the log configuration settings.
+Gets a copy of the log configuration settings.
 
 .DESCRIPTION
-Gets the log configuration settings.
+Gets a copy of the log configuration settings.  
+
+The hash table returned by Get-LogConfiguration is a copy of the Prog configuration, NOT a
+reference to the live configuration.  This means any changes to the hash table retrieved by 
+Get-LogConfiguration will NOT be reflected in Prog's configuration.
 
 .OUTPUTS
 A hash table with the following keys:
@@ -820,23 +824,20 @@ A hash table with the following keys:
             Color: The text color for messages of the specified category, if they are written to 
                 the host. 
 .NOTES
-The hash table returned by Get-LogConfiguration is a copy of the Prog configuration, NOT a
-reference to the live configuration.  This means any changes to the hash table retrieved by 
-Get-LogConfiguration will NOT be reflected in Prog's configuration.
+Get-LogConfiguration returns a copy of the Prog configuration, NOT a reference to the live 
+configuration.  As a result the Prog configuration can only be updated via Set-LogConfiguration.  
+This ensures that the Prog internal state is updated correctly.  
 
-As a result the Prog configuration can only be updated via Set-LogConfiguration.  This ensures 
-that the Prog internal state is updated correctly.  
+For example, if a user were able to use Get-LogConfiguration to access the live configuration 
+and modify it to set the configuration MessageFormat string directly, the modified MessageFormat 
+would not be used when writing log messages.  That is because Set-LogConfiguration parses the 
+new MessageFormat string and updates Prog's internal state to indicate which fields are to be 
+included in log messages.  If the configuration MessageFormat string were updated directly it 
+would not be parsed and the list of fields to include in log messages would not be updated.
 
-For example, if a user were able to set the configuration MessageFormat string directly this 
-modified MessageFormat would not be used when writing log messages.  That is because 
-Set-LogConfiguration parses the new MessageFormat string and updates Prog's internal state to 
-indicate which fields are to be included in log messages.  If the configuration MessageFormat 
-string were updated directly it would not be parsed and the list of fields to include in 
-log messages would not be updated.
-
-Although updating the hash table retrieved by Get-LogConfiguration will not update the Prog 
-configuration, the updated hash table can be written back as the Prog configuration via 
-Set-LogConfiguration.  
+Although changes to the hash table retrieved by Get-LogConfiguration will not be reflected in 
+the Prog configuration, the updated hash table can be written back into the Prog configuration 
+via Set-LogConfiguration.  
 
 .EXAMPLE
 Get the text color for messages with category Success:
@@ -1073,6 +1074,12 @@ CategoryInfoItem can take two different arguments:
         This sets a single CategoryInfo item.  If the key already exists the value will be 
         replaced.  If the key does not already exist it will be created.
 
+Only one CategoryInfo item can have the IsDefault property set.  If one of the supplied items has 
+IsDefault set then the IsDefault property will be removed from all existing items.  If multiple 
+supplied items have IsDefault set then only the last one processed will end up with IsDefault.  
+The last item processed will depend on the sort order of the CategoryInfo hash table Keys 
+collection.
+
 .PARAMETER CategoryInfoKeyToRemove
 Removes one or more items from the CategoryInfo hash table.
 
@@ -1171,6 +1178,15 @@ Use parameter -LogConfiguration to update the entire configuration at once:
 	Set-LogConfiguration -LogConfiguration $logConfiguration
 
 .EXAMPLE
+Use Get-LogConfiguration and Set-LogConfiguration to update the configuration:
+
+    $config = Get-LogConfiguration
+    $config.LogLevel = 'ERROR'
+    $config.LogFile.Name = 'Error.log'
+    $config.CategoryInfo['FileCopy'] = @{Color = 'DarkYellow'}
+    Set-LogConfiguration -LogConfiguration $config
+
+.EXAMPLE
 Set the details of the log file using individual parameters:
 
     Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendToLogFile
@@ -1235,15 +1251,6 @@ Set all text colors simultaneously:
 					}
 					
 	Set-LogConfiguration -HostTextColorConfiguration $hostColors
-
-.EXAMPLE
-Use Get-LogConfiguration and Set-LogConfiguration to update Prog's configuration:
-
-    $config = Get-LogConfiguration
-    $config.LogLevel = 'ERROR'
-    $config.LogFile.Name = 'Error.log'
-    $config.CategoryInfo['FileCopy'] = @{Color = 'DarkYellow'}
-    Set-LogConfiguration -LogConfiguration $config
     
 .LINK
 Write-LogMessage
@@ -1813,7 +1820,7 @@ function Private_ValidateCategoryInfoItem (
         if (-not ($value -is [hashtable]))
         {
             throw [ArgumentException]::new( `
-                "Expected second element to be a hashtable but it is $($value.GetType().FullName).", 
+                "Expected second element to be a hash table but it is $($value.GetType().FullName).", 
                 'CategoryInfoItem')
         }
 
@@ -1835,7 +1842,7 @@ function Private_ValidateCategoryInfoItem (
             if (-not ($value -is [hashtable]))
             {
                 throw [ArgumentException]::new( `
-                    "Expected value to be a hashtable but it is $($value.GetType().FullName).", 
+                    "Expected value to be a hash table but it is $($value.GetType().FullName).", 
                     'CategoryInfoItem')
             }
         }
@@ -1844,7 +1851,7 @@ function Private_ValidateCategoryInfoItem (
     }
 
     throw [ArgumentException]::new( `
-        "Expected argument to be either a hashtable or an array but it is $($CategoryInfoItem.GetType().FullName).",
+        "Expected argument to be either a hash table or an array but it is $($CategoryInfoItem.GetType().FullName).",
         'CategoryInfoItem')
 }
 
@@ -1853,8 +1860,8 @@ function Private_ValidateCategoryInfoItem (
 Sets a configuration CategoryInfo item.
 
 .DESCRIPTION
-The item to set is specified via the -Key and -Value parameters.  If the value hashtable contains 
-an IsDefault key then any existing value hashtable with an IsDefault key will have the key 
+The item to set is specified via the -Key and -Value parameters.  If the value hash table contains 
+an IsDefault key then any existing value hash table with an IsDefault key will have the key 
 removed.
 #>
 function Private_SetCategoryInfoItem (
