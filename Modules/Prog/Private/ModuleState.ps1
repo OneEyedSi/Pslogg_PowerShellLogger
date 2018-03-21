@@ -12,7 +12,7 @@ $_logLevels = @{
 $_defaultHostTextColor = @{
                                 Error = 'Red'
                                 Warning = 'Yellow'
-                                Information = 'Cyan'
+                                Information = 'White'
                                 Debug = 'White'
                                 Verbose = 'White'
                             }
