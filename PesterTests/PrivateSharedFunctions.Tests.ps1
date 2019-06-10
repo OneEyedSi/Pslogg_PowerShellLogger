@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-Tests of the shared private functions in the Prog module.
+Tests of the shared private functions in the Pslogg module.
 
 .DESCRIPTION
-Pester tests of the private functions in the Prog module that are called by both the 
+Pester tests of the private functions in the Pslogg module that are called by both the 
 configuration and the logging functions.
 #>
 
 # PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Prog modules imported, 
-# remove all Prog modules and re-import only one.
-Get-Module Prog | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Prog module in the Modules folder 
+# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+# remove all Pslogg modules and re-import only one.
+Get-Module Pslogg | Remove-Module -Force
+# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
 # adjacent to the folder containing this script, regardless of the location that Pester is 
 # invoked from:
 #                                     {parent folder}
@@ -20,12 +20,12 @@ Get-Module Prog | Remove-Module -Force
 #                   |                                                   |
 #     {folder containing this script}                                Modules folder
 #                   \                                                   |
-#                    ------------------> imports                     Prog module folder
+#                    ------------------> imports                     Pslogg module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
+#                                                 -----------------> Pslogg.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
 
-InModuleScope Prog {
+InModuleScope Pslogg {
 
     # Need to dot source the helper file within the InModuleScope block to be able to use its 
     # functions within a test.

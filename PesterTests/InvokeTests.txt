@@ -1,0 +1,13 @@
+Invoke-Pester -TestName Reset-LogConfiguration -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\ExportedConfigurationFunctions.Tests.ps1
+
+Invoke-Pester -TestName GetMessageFormatInfo -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\PrivateSharedFunctions.Tests.ps1
+
+Invoke-Pester -TestName GetAbsolutePath -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\PrivateConfigurationFunctions.Tests.ps1
+
+Invoke-Pester -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\*.Tests.ps1
+
+Invoke-Pester -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\ExportedLoggingFunctions.Tests.ps1
+
+Invoke-Pester -Script C:\Users\SimonE\Documents\SimonsDocuments\IT\PowerShell\Modules\Pslogg_PowerShellLogger\PesterTests\ExportedConfigurationFunctions.Tests.ps1
+
+Invoke-Pester -Script C:\Users\simone\Documents\SimonsDocuments\IT\PowerShell\Modules\PesterAssertExceptionThrown\PesterTests\Assert-ExceptionThrown.Tests.ps1

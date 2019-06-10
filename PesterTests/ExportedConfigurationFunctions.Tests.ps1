@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-Tests of the exported configuration functions in the Prog module.
+Tests of the exported configuration functions in the Pslogg module.
 
 .DESCRIPTION
-Pester tests of the configuration-related functions exported from the Prog module.
+Pester tests of the configuration-related functions exported from the Pslogg module.
 #>
 
 # PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Prog modules imported, 
-# remove all Prog modules and re-import only one.
-Get-Module Prog | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Prog module in the Modules folder 
+# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+# remove all Pslogg modules and re-import only one.
+Get-Module Pslogg | Remove-Module -Force
+# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
 # adjacent to the folder containing this script, regardless of the location that Pester is 
 # invoked from:
 #                                     {parent folder}
@@ -19,12 +19,12 @@ Get-Module Prog | Remove-Module -Force
 #                   |                                                   |
 #     {folder containing this script}                                Modules folder
 #                   \                                                   |
-#                    ------------------> imports                     Prog module folder
+#                    ------------------> imports                     Pslogg module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
+#                                                 -----------------> Pslogg.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
 
-InModuleScope Prog {
+InModuleScope Pslogg {
 
     # Need to dot source the helper file within the InModuleScope block to be able to use its 
     # functions within a test.
@@ -307,14 +307,14 @@ InModuleScope Prog {
         $dateString = Get-Date -Format "_yyyyMMdd"
         $fileName = "Results${dateString}.log"
         # Can't use $PSScriptRoot because it will return the folder containing this file, while 
-        # the Prog module will see the ultimate caller as the Pester module running this 
+        # the Pslogg module will see the ultimate caller as the Pester module running this 
         # test script.
         $callingDirectoryPath = GetCallingDirectoryPath
         $path = Join-Path $callingDirectoryPath $fileName
         return $path
     }
 
-    # Sets the Prog configuration to its defaults.
+    # Sets the Pslogg configuration to its defaults.
     function SetConfigurationToDefault ()
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
@@ -323,7 +323,7 @@ InModuleScope Prog {
         $script:_logFileOverwritten = $False
     }
 
-    # Sets the Prog configuration so that every settings differs from the defaults.
+    # Sets the Pslogg configuration so that every settings differs from the defaults.
     function SetNewConfiguration ()
     {
         $script:_logConfiguration = GetNewConfiguration

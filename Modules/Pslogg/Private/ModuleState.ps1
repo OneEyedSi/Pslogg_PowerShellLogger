@@ -1,4 +1,4 @@
-# Variables that represent the internal state of the Prog module.
+# Variables that represent the internal state of the Pslogg module.
 
 $_logLevels = @{
                     Off = 0

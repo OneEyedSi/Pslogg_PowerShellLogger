@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-Tests of the private logging functions in the Prog module.
+Tests of the private logging functions in the Pslogg module.
 
 .DESCRIPTION
-Pester tests of the private functions in the Prog module that are called by the public 
+Pester tests of the private functions in the Pslogg module that are called by the public 
 logging functions.
 #>
 
 # PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Prog modules imported, 
-# remove all Prog modules and re-import only one.
-Get-Module Prog | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Prog module in the Modules folder 
+# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+# remove all Pslogg modules and re-import only one.
+Get-Module Pslogg | Remove-Module -Force
+# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
 # adjacent to the folder containing this script, regardless of the location that Pester is 
 # invoked from:
 #                                     {parent folder}
@@ -20,12 +20,12 @@ Get-Module Prog | Remove-Module -Force
 #                   |                                                   |
 #     {folder containing this script}                                Modules folder
 #                   \                                                   |
-#                    ------------------> imports                     Prog module folder
+#                    ------------------> imports                     Pslogg module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
+#                                                 -----------------> Pslogg.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
 
-InModuleScope Prog {
+InModuleScope Pslogg {
 
     Describe 'GetCallingFunctionName' {     
 
@@ -49,7 +49,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 return $callStack
             }
@@ -63,7 +63,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName=$Null }
                 $callStack += $stackFrame
@@ -79,7 +79,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -95,7 +95,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='<ScriptBlock>' }
                 $callStack += $stackFrame
@@ -111,7 +111,7 @@ InModuleScope Prog {
 
             Mock Get-PSCallStack { 
                 $callStack = @()
-                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Prog.psd1'; FunctionName='Private_GetCallerName' }
+                $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
                 $callStack += $stackFrame
                 $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='TestFunction' }
                 $callStack += $stackFrame

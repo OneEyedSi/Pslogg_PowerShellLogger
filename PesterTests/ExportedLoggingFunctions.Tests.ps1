@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-Tests of the exported Prog functions in the Prog module.
+Tests of the exported Pslogg functions in the Pslogg module.
 
 .DESCRIPTION
-Pester tests of the logging functions exported from the Prog module.
+Pester tests of the logging functions exported from the Pslogg module.
 #>
 
 # PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Prog modules imported, 
-# remove all Prog modules and re-import only one.
-Get-Module Prog | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Prog module in the Modules folder 
+# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+# remove all Pslogg modules and re-import only one.
+Get-Module Pslogg | Remove-Module -Force
+# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
 # adjacent to the folder containing this script, regardless of the location that Pester is 
 # invoked from:
 #                                     {parent folder}
@@ -19,10 +19,10 @@ Get-Module Prog | Remove-Module -Force
 #                   |                                                   |
 #     {folder containing this script}                                Modules folder
 #                   \                                                   |
-#                    ------------------> imports                     Prog module folder
+#                    ------------------> imports                     Pslogg module folder
 #                                                \                      |
-#                                                 -----------------> Prog.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Prog\Prog.psd1 -Resolve) -Force
+#                                                 -----------------> Pslogg.psd1 module script
+Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
 
 <#
 .SYNOPSIS
@@ -33,7 +33,7 @@ function NoArgsException
     throw [ArgumentException] "This is the message"
 }
 
-InModuleScope Prog {
+InModuleScope Pslogg {
 
     # Need to dot source the helper file within the InModuleScope block to be able to use its 
     # functions within a test.
@@ -76,7 +76,7 @@ InModuleScope Prog {
         return $path
     }
 
-    # Sets the Prog configuration to its defaults, apart from LogFileName and LogFilePath.
+    # Sets the Pslogg configuration to its defaults, apart from LogFileName and LogFilePath.
     function ResetConfiguration ()
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
@@ -313,7 +313,7 @@ InModuleScope Prog {
                 # It's messy throwing exceptions inside a parameter filter but we get 
                 # more informative error messages which include expected and actual text, 
                 # rather than unhelpful
-                #   "Expected Write-Host in module Prog to be called at least 1 times but was called 0 times"
+                #   "Expected Write-Host in module Pslogg to be called at least 1 times but was called 0 times"
                 if ($DoRegexMatch.IsPresent)
                 {
                     $Object | Should -Match $ExpectedLoggedText
@@ -340,14 +340,14 @@ InModuleScope Prog {
         Context 'No message supplied' {
 
             It 'throws no error when no Message supplied' {
-                # Only want the message field logged, so Prog isn't logging any text at all.
+                # Only want the message field logged, so Pslogg isn't logging any text at all.
                 Private_SetMessageFormat '{Message}'
 
                 { Write-LogMessage } | Should -Not -Throw
             }
 
             It 'writes to log when no Message supplied' {
-                # Only want the message field logged, so Prog isn't logging any text at all.
+                # Only want the message field logged, so Pslogg isn't logging any text at all.
                 Private_SetMessageFormat '{Message}'
                 Mock Write-Host
 
@@ -370,7 +370,7 @@ InModuleScope Prog {
             }
 
             It 'writes to log when -Message is $Null' {
-                # Only want the message field logged, so Prog isn't logging any text at all.
+                # Only want the message field logged, so Pslogg isn't logging any text at all.
                 Private_SetMessageFormat '{Message}'
 
                 Write-LogMessage -Message $Null
@@ -385,7 +385,7 @@ InModuleScope Prog {
             }
 
             It 'writes to log when -Message is empty string' {
-                # Only want the message field logged, so Prog isn't logging any text at all.
+                # Only want the message field logged, so Pslogg isn't logging any text at all.
                 Private_SetMessageFormat '{Message}'
 
                 Write-LogMessage -Message ''
@@ -399,7 +399,7 @@ InModuleScope Prog {
             }
 
             It 'writes to log when Message passed by position' {
-                # Only want the message field logged, so Prog isn't logging any text at all.
+                # Only want the message field logged, so Pslogg isn't logging any text at all.
                 Private_SetMessageFormat '{Message}'
 
                 Write-LogMessage 'hello world'
@@ -718,7 +718,7 @@ InModuleScope Prog {
 
             It 'does not attempt to write to a log file when configuration LogFile.Name not a valid path' {
                 $logFileName = 'CC:\Test\Test.log'
-                # This scenario should never occur.  Prog should throw an exception when setting 
+                # This scenario should never occur.  Pslogg should throw an exception when setting 
                 # LogFileName to an invalid path via Set-LogConfiguration.
                 $script:_logConfiguration.LogFile.Name = $logFileName
                 $script:_logFilePath = $logFileName

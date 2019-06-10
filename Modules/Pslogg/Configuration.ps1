@@ -1,4 +1,4 @@
-# Functions for reading and setting the Prog logger configuration.
+# Functions for reading and setting the Pslogg logger configuration.
 
 . $PSScriptRoot\Private\SharedFunctions.ps1
 
@@ -9,9 +9,9 @@ Gets a copy of the log configuration settings.
 .DESCRIPTION
 Gets a copy of the log configuration settings.  
 
-The hash table returned by Get-LogConfiguration is a copy of the Prog configuration, NOT a
+The hash table returned by Get-LogConfiguration is a copy of the Pslogg configuration, NOT a
 reference to the live configuration.  This means any changes to the hash table retrieved by 
-Get-LogConfiguration will NOT be reflected in Prog's configuration.
+Get-LogConfiguration will NOT be reflected in Pslogg's configuration.
 
 .OUTPUTS
 A hash table with the following keys:
@@ -163,19 +163,19 @@ A hash table with the following keys:
             Color: The text color for messages of the specified category, if they are written to 
                 the host. 
 .NOTES
-Get-LogConfiguration returns a copy of the Prog configuration, NOT a reference to the live 
-configuration.  As a result the Prog configuration can only be updated via Set-LogConfiguration.  
-This ensures that the Prog internal state is updated correctly.  
+Get-LogConfiguration returns a copy of the Pslogg configuration, NOT a reference to the live 
+configuration.  As a result the Pslogg configuration can only be updated via Set-LogConfiguration.  
+This ensures that the Pslogg internal state is updated correctly.  
 
 For example, if a user were able to use Get-LogConfiguration to access the live configuration 
 and modify it to set the configuration MessageFormat string directly, the modified MessageFormat 
 would not be used when writing log messages.  That is because Set-LogConfiguration parses the 
-new MessageFormat string and updates Prog's internal state to indicate which fields are to be 
+new MessageFormat string and updates Pslogg's internal state to indicate which fields are to be 
 included in log messages.  If the configuration MessageFormat string were updated directly it 
 would not be parsed and the list of fields to include in log messages would not be updated.
 
 Although changes to the hash table retrieved by Get-LogConfiguration will not be reflected in 
-the Prog configuration, the updated hash table can be written back into the Prog configuration 
+the Pslogg configuration, the updated hash table can be written back into the Pslogg configuration 
 via Set-LogConfiguration.  
 
 .EXAMPLE
@@ -225,7 +225,7 @@ Get the format of log messages:
     {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
 
 .EXAMPLE
-Use Get-LogConfiguration and Set-LogConfiguration to update Prog's configuration:
+Use Get-LogConfiguration and Set-LogConfiguration to update Pslogg's configuration:
 
     $config = Get-LogConfiguration
     $config.LogLevel = 'ERROR'
