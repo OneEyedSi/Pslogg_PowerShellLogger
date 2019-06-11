@@ -96,7 +96,7 @@ PrivateData = @{
         Tags = 'Log', 'Logging', 'Logger'
 
         # A URL to the license for this module.
-        LicenseUri = 'http://www.isc.org/downloads/software-support-policy/isc-license/'
+        LicenseUri = 'https://opensource.org/licenses/isc-license.txt'
 
         # A URL to the main website for this project.
         ProjectUri = 'https://github.com/AnotherSadGit/Pslogg_PowerShellLogger'
