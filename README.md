@@ -1,10 +1,11 @@
-# Prog
+# Pslogg
 A PowerShell module for logging messages to the host, to PowerShell streams, or to a log file.
 
-### v0.9 branch build status: [![build status](https://ci.appveyor.com/api/projects/status/0xu4p7bvxdxgkaql/branch/v0.9?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/prog-powershelllogger/branch/v0.9)
+### most recent build status: [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger)
+### master branch build status: [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9/branch/master?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger/branch/master)
 
 ## Getting Started
-Copy the Prog_PowerShellLoggingModule > Modules > Prog folder, with its contents, to one of the 
+Copy the Pslogg_PowerShellLogger > Modules > Pslogg folder, with its contents, to one of the 
 locations that PowerShell recognizes for modules.  The two default locations are:
 
 1. For all users:  **%ProgramFiles%\WindowsPowerShell\Modules** 
@@ -13,31 +14,31 @@ locations that PowerShell recognizes for modules.  The two default locations are
 2. For the current user only:  **%UserProfile%\Documents\WindowsPowerShell\Modules** 
 (usually resolves to C:\Users\\{user name}\Documents\WindowsPowerShell\Modules)
 
-If the PowerShell console or the PowerShell ISE is open when you copy the Prog folder to a 
+If the PowerShell console or the PowerShell ISE is open when you copy the Pslogg folder to a 
 recognized module location you may need to close and reopen the console or ISE for it to 
-recognize the new Prog module.
+recognize the new Pslogg module.
 
-Once the Prog folder has been saved to a recognized module location you should be able to call 
+Once the Pslogg folder has been saved to a recognized module location you should be able to call 
 the module's functions without explicitly importing the module.
 
 ## Features
 
-The Prog module exports four functions:
+The Pslogg module exports four functions:
 
 1) **_Write-LogMessage_**:  Writes log messages to the host or to a PowerShell stream, and 
 optionally to a log file;
 
 2) **_Get-LogConfiguration_**:  Retrieves a hash table which is a copy of the current configuration 
-settings of the Prog module;
+settings of the Pslogg module;
 
 3) **_Set-LogConfiguration_**:  Sets one or more configuration settings.  Use this function to 
-set up the Prog module prior to writing any log messages;
+set up the Pslogg module prior to writing any log messages;
 
 4) **_Reset-LogConfiguration_**:  Resets the configuration back to its default settings.
 
 ## Detailed Help for Exported Functions
 
-Once the Prog module has been imported into the local PowerShell session comment-based help can 
+Once the Pslogg module has been imported into the local PowerShell session comment-based help can 
 be used to view details of each of the functions exported from the module.  For example, to see 
 details of the Write-LogMessage function enter the following in the PowerShell console:
 
@@ -49,7 +50,7 @@ help Write-LogMessage -full
 
 ### Configuration
 
-Prior to writing log messages, use **_Set-LogConfiguration_** to configure the Prog module.  
+Prior to writing log messages, use **_Set-LogConfiguration_** to configure the Pslogg module.  
 
 _Set-LogConfiguration_ may be used to set the following log properties:
 
@@ -105,19 +106,19 @@ into parameter _-HostTextColorConfiguration_, or you can update individual color
 parameters such as _-ErrorTextColor_ and _-WarningTextColor_.
 
 #### Get-LogConfiguration
-**_Get-LogConfiguration_** retrieves a copy of the Prog configuration hash table, NOT a reference to 
-the live configuration.  As a result the Prog configuration can only be updated via 
-_Set-LogConfiguration_.  This ensures that the Prog internal state is updated correctly.  
+**_Get-LogConfiguration_** retrieves a copy of the Pslogg configuration hash table, NOT a reference to 
+the live configuration.  As a result the Pslogg configuration can only be updated via 
+_Set-LogConfiguration_.  This ensures that the Pslogg internal state is updated correctly.  
 
 For example, if a user were able to use _Get-LogConfiguration_ to access the live configuration 
 and modify it to set the configuration MessageFormat string directly, the modified MessageFormat 
 would not be used when writing log messages.  That is because _Set-LogConfiguration_ parses the 
-new MessageFormat string and updates Prog's internal state to indicate which fields are to be 
+new MessageFormat string and updates Pslogg's internal state to indicate which fields are to be 
 included in log messages.  If the configuration MessageFormat string were updated directly it 
 would not be parsed and the list of fields to include in log messages would not be updated.
 
 Although changes to the hash table retrieved by _Get-LogConfiguration_ will not be reflected in 
-the Prog configuration, the updated hash table can be written back into the Prog configuration 
+the Pslogg configuration, the updated hash table can be written back into the Pslogg configuration 
 via _Set-LogConfiguration_.  
 
 #### Examples
@@ -168,7 +169,7 @@ PS C:\Users\Me> $config.MessageFormat
     {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
 ```
 
-##### Use _Get-LogConfiguration_ and _Set-LogConfiguration_ to update Prog's configuration:
+##### Use _Get-LogConfiguration_ and _Set-LogConfiguration_ to update Pslogg's configuration:
 ```
     $config = Get-LogConfiguration
     $config.LogLevel = 'ERROR'
