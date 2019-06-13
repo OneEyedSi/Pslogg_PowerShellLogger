@@ -1,10 +1,47 @@
 # Pslogg
 A PowerShell module for logging messages to the host, to PowerShell streams, or to a log file.
 
-### most recent build status: [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger)
-### master branch build status: [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9/branch/master?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger/branch/master)
+|                               |                                                                                                            |
+------------------------------ | -----------------------------------------------------------------------------------------------------------
+**Most recent build status**   | [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger)
+**Master branch build status** | [![Build status](https://ci.appveyor.com/api/projects/status/4ewhdwapoynjnta9/branch/master?svg=true)](https://ci.appveyor.com/project/AnotherSadGit/pslogg-powershelllogger/branch/master)
 
 ## Getting Started
+There are two ways of installing the Pslogg module:  from the PowerShell Gallery via PowerShellGet 
+or Manually:
+
+### Installing from the PowerShell Gallery via PowerShellGet
+You will need to run the following commands in a console or terminal with **Administrator privileges**.
+
+##### If you have direct access to the internet:
+```
+install-module -Name Pslogg -Repository 'PSGallery'
+```
+**NOTE:** If you get an error message similar to:<br/>
+*WARNING: Source Location 'https://www.powershellgallery.com/api/v2/package/Pslogg/2.0.0' is not valid. 
+PackageManagement\Install-Package : Package 'Pslogg' failed to download.*<br/>
+then you are probably behind a proxy server.  See how to install the module from behind a proxy, below.
+
+##### If you're behind a proxy server:
+```
+$proxyCredential = Get-Credential -Message 'Please enter credentials for proxy server'                        
+install-module -Name Pslogg -Repository 'PSGallery' `
+    -Proxy 'http://...:8080' -ProxyCredential $proxyCredential
+```
+(replace the 'http://...:8080' with the correct URL for your proxy server)
+
+##### To check if the module is installed:
+```
+get-installedmodule -Name Pslogg
+```
+
+**NOTE:** You may get an error message along the lines of:<br/>
+*"PowerShellGet requires NuGet provider version '2.8.5.201' or newer to interact with NuGet-based repositories."*<br/>
+See the following document from Microsoft to resolve this issue:<br/>
+*"Bootstrap the NuGet provider and NuGet.exe"*<br/>
+at https://docs.microsoft.com/en-us/powershell/gallery/how-to/getting-support/bootstrapping-nuget
+
+### Manually
 Copy the Pslogg_PowerShellLogger > Modules > Pslogg folder, with its contents, to one of the 
 locations that PowerShell recognizes for modules.  The two default locations are:
 
@@ -25,16 +62,16 @@ the module's functions without explicitly importing the module.
 
 The Pslogg module exports four functions:
 
-1) **_Write-LogMessage_**:  Writes log messages to the host or to a PowerShell stream, and 
+1. **_Write-LogMessage_**:  Writes log messages to the host or to a PowerShell stream, and 
 optionally to a log file;
 
-2) **_Get-LogConfiguration_**:  Retrieves a hash table which is a copy of the current configuration 
+2. **_Get-LogConfiguration_**:  Retrieves a hash table which is a copy of the current configuration 
 settings of the Pslogg module;
 
-3) **_Set-LogConfiguration_**:  Sets one or more configuration settings.  Use this function to 
+3. **_Set-LogConfiguration_**:  Sets one or more configuration settings.  Use this function to 
 set up the Pslogg module prior to writing any log messages;
 
-4) **_Reset-LogConfiguration_**:  Resets the configuration back to its default settings.
+4. **_Reset-LogConfiguration_**:  Resets the configuration back to its default settings.
 
 ## Detailed Help for Exported Functions
 
@@ -54,7 +91,7 @@ Prior to writing log messages, use **_Set-LogConfiguration_** to configure the P
 
 _Set-LogConfiguration_ may be used to set the following log properties:
 
-1) **The log level:**  This determines whether a message will be logged or not.  
+1. **The log level:**  This determines whether a message will be logged or not.  
 	
    Possible log levels, in order from lowest to highest, are: 
    * OFF
@@ -69,21 +106,21 @@ _Set-LogConfiguration_ may be used to set the following log properties:
    WARNING or ERROR will be logged.  Messages at a level of DEBUG or VERBOSE will not be logged, 
    as these log levels are higher than INFORMATION;
 
-2) **The message destination:**  Messages may be written to the host or to PowerShell streams 
+2. **The message destination:**  Messages may be written to the host or to PowerShell streams 
 such as the Information stream or the Verbose stream.  In addition, if a log file name is set in 
 the configuration, the messages will be written to the log file;
 
-3) **The host text color:**  Messages written to the host, as opposed to PowerShell streams, may 
+3. **The host text color:**  Messages written to the host, as opposed to PowerShell streams, may 
 be written in any PowerShell console color.  Different colors may be specified for different 
 message types, such as Error, Warning or Information.  Different colors may also be specified 
 for different message categories;
 
-4) **The message format:**  In addition to the specified message, the text written to the log may 
+4. **The message format:**  In addition to the specified message, the text written to the log may 
 include additional fields that are automatically populated, such as a timestamp or the name of 
 the function writing to the log.  A simple template can be defined to specify the format of the 
 logged text, including the fields to be displayed and any field separators;
 
-5) **Whether an existing log file will be overwritten or appended to:**  If a log file is specified 
+5. **Whether an existing log file will be overwritten or appended to:**  If a log file is specified 
 in the configuration you can determine whether new log messages will overwrite an existing log 
 file with the same file name or will be appended to the end of it.  If the option to overwrite an 
 existing file is chosen it will only be overwritten by the first message written to the log in a 
@@ -91,13 +128,13 @@ given session.  Subsequent messages written in the same session will be appended
 
 The configuration can be updated by _Set-LogConfiguration_ in two different ways:
 
-1) **Use parameter -LogConfiguration:**  Pass in a hash table representing all the configuration 
+1. **Use parameter -LogConfiguration:**  Pass in a hash table representing all the configuration 
 settings.  This can be used together with function _Get-LogConfiguration_:  Use 
 _Get-LogConfiguration_ to read the current configuration out as a hash table, update that hash 
 table with new settings, then write the updated hash table back using 
 `Set-LogConfiguration -LogConfiguration <hash table>`;
 
-2) **Use different parameters to update individual configuration settings:**  For example, 
+2. **Use different parameters to update individual configuration settings:**  For example, 
 parameter _-LogLevel_ can be used to set the configured log level, and parameter _-LogFileName_ 
 can be used to set the configured log file name.  
 
