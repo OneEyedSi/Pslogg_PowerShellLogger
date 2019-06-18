@@ -14,7 +14,7 @@ or Manually:
 You will need to run the following commands in a console or terminal with **Administrator privileges**.
 
 ##### If you have direct access to the internet:
-```
+```powershell
 install-module -Name Pslogg -Repository 'PSGallery'
 ```
 **NOTE:** If you get an error message similar to:<br/>
@@ -23,15 +23,15 @@ PackageManagement\Install-Package : Package 'Pslogg' failed to download.*<br/>
 then you are probably behind a proxy server.  See how to install the module from behind a proxy, below.
 
 ##### If you're behind a proxy server:
-```
-$proxyCredential = Get-Credential -Message 'Please enter credentials for proxy server'                        
+```powershell
+$proxyCredential = Get-Credential -Message 'Please enter credentials for proxy server'
 install-module -Name Pslogg -Repository 'PSGallery' `
-    -Proxy 'http://...:8080' -ProxyCredential $proxyCredential
+    -Proxy 'http://...' -ProxyCredential $proxyCredential
 ```
-(replace the 'http://...:8080' with the correct URL for your proxy server)
+(replace the 'http://...' with the correct URL for your proxy server)
 
 ##### To check if the module is installed:
-```
+```powershell
 get-installedmodule -Name Pslogg
 ```
 
@@ -79,7 +79,7 @@ Once the Pslogg module has been imported into the local PowerShell session comme
 be used to view details of each of the functions exported from the module.  For example, to see 
 details of the Write-LogMessage function enter the following in the PowerShell console:
 
-```
+```powershell
 help Write-LogMessage -full
 ```
 
@@ -161,7 +161,7 @@ via _Set-LogConfiguration_.
 #### Examples
 
 ##### Get the text color for messages with category Success:
-```
+```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.CategoryInfo.Success.Color 
 
@@ -169,7 +169,7 @@ PS C:\Users\Me> $config.CategoryInfo.Success.Color
 ```
 
 ##### Get the text colors for all message levels:
-```
+```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.HostTextColor 
 
@@ -183,7 +183,7 @@ PS C:\Users\Me> $config.HostTextColor
 ```
 
 ##### Get the text color for messages of level ERROR:
-```
+```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.HostTextColor.Error 
 
@@ -191,7 +191,7 @@ PS C:\Users\Me> $config.HostTextColor.Error
 ```	
 
 ##### Get the name of the file messages will be logged to:
-```
+```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.LogFile.Name 
 
@@ -199,7 +199,7 @@ PS C:\Users\Me> $config.LogFile.Name
 ```
 
 ##### Get the format of log messages:
-```
+```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.MessageFormat 
 
@@ -207,7 +207,7 @@ PS C:\Users\Me> $config.MessageFormat
 ```
 
 ##### Use _Get-LogConfiguration_ and _Set-LogConfiguration_ to update Pslogg's configuration:
-```
+```powershell
     $config = Get-LogConfiguration
     $config.LogLevel = 'ERROR'
     $config.LogFile.Name = 'Error.log'
@@ -216,28 +216,28 @@ PS C:\Users\Me> $config.MessageFormat
  ```
 
 ##### Set the details of the log file using individual parameters:
-```
+```powershell
 Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendToLogFile
 ```
 	
 ##### Set the LogLevel and MessageFormat using individual parameters:
-```
+```powershell
 Set-LogConfiguration -LogLevel Warning `
     -MessageFormat '{Timestamp:yyyy-MM-dd hh:mm:ss},{Category},{Message}'
 ```
 
 ##### Set the text color used by the host to display messages with category 'FileCopy':
-```
+```powershell
 Set-LogConfiguration -CategoryInfoItem 'FileCopy', @{ Color = 'Blue' }
 ```	
 	
 ##### Set the text colors used by the host to display error and warning messages:
-```
+```powershell
 Set-LogConfiguration -ErrorTextColor DarkRed -WarningTextColor DarkYellow
 ```
 
 ##### Set all text colors simultaneously:
-```
+```powershell
 $hostColors = @{
 					Error = 'DarkRed'
 					Warning = 'DarkYellow'
@@ -254,13 +254,13 @@ Messages are logged using the **Write-LogMessage** function.
 #### Examples
 
 ##### Write message to log:
-```
+```powershell
  Write-LogMessage -Message "Updating user settings for $userName..."
 ```
 
 The `-Message` parameter is optional:
 
-```
+```powershell
  Write-LogMessage "Updating user settings for $userName..."
 ```
 
@@ -290,7 +290,7 @@ _-IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose_.
 #### Examples
 
 ##### Write error message to log:
-```
+```powershell
 try
 {
 	...
@@ -302,12 +302,12 @@ catch [System.IO.FileNotFoundException]
 ```
 
 ##### Write debug message to log:
-```
+```powershell
  Write-LogMessage "Updating user settings for $userName..." -IsDebug
 ```
 
 ##### Specify the MessageLevel as text rather than using a Message Level switch:
-```
+```powershell
 Write-LogMessage "Updating user settings for $userName..." -MessageLevel 'DEBUG'
 ```
 
@@ -325,7 +325,7 @@ color specified by the configuration CategoryInfo.Success.Color, if it exists.
 #### Example
 
 ##### Write message to the log with a certain category:
-```
+```powershell
     Write-LogMessage 'File copy completed successfully.' -Category 'Success' -IsInformation
 ```
 
@@ -337,12 +337,12 @@ _Set-LogConfiguration_.
 #### Examples
 
 ##### Write message to host in a specified color:
-```
+```powershell
 Write-LogMessage 'Updating user settings...' -WriteToHost -HostTextColor Cyan
 ```
 
 ##### Write message with a custom message format which only applies to this one message:
-```
+```powershell
 Write-LogMessage "***** Running on server: $serverName *****" -MessageFormat '{message}'
 ```
 
@@ -350,6 +350,6 @@ The message written to the log will only include the specified message text.  It
 include other fields, such as {Timestamp} or {CallerName}.
 
 ##### Write message to the Debug PowerShell stream, rather than to the host:
-```
+```powershell
 Write-LogMessage 'Updating user settings...' -WriteToStreams -IsDebug
 ```
