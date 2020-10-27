@@ -33,6 +33,7 @@ $_defaultLogConfiguration = @{
                                                 Name = 'Results.log'
                                                 IncludeDateInFileName = $True
                                                 Overwrite = $True
+                                                FullPath = ''
                                             }
                                 CategoryInfo = $_defaultCategoryInfo
                             }
@@ -42,5 +43,4 @@ $_defaultTimestampFormat = 'yyyy-MM-dd hh:mm:ss.fff'
 $_logConfiguration = @{}
 $_messageFormatInfo = @{}
 
-$_logFilePath = ''
 $_logFileOverwritten = $False

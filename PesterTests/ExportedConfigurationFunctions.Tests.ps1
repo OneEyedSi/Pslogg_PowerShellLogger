@@ -58,7 +58,8 @@ InModuleScope Pslogg {
     function GetHashTableDifferences (
         [hashtable]$HashTable1,
         [hashtable]$HashTable2, 
-        [int]$IndentLevel = 0
+        [int]$IndentLevel = 0,
+        [switch]$ValueTypesOnly
     )
     {
         $spacesPerIndent = 4
@@ -144,7 +145,7 @@ InModuleScope Pslogg {
 
             # Compare-Object, at the parent hashtable level, will always assume nested hashtables are 
             # identical, even if they aren't.  So treat nested hashtables as a special case.
-            if ($typeName1 -eq 'System.Collections.Hashtable')
+            if ($typeName1 -eq 'System.Collections.Hashtable' -and -not $ValueTypesOnly)
             {            
                 $nestedHashTableDifferences = GetHashTableDifferences `
                     -HashTable1 $value1 -HashTable2 $value2 -IndentLevel ($IndentLevel + 1)
@@ -319,7 +320,7 @@ InModuleScope Pslogg {
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
         $script:_messageFormatInfo = GetDefaultMessageFormatInfo
-        $script:_logFilePath = GetDefaultLogFilePath
+        $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
         $script:_logFileOverwritten = $False
     }
 
@@ -328,7 +329,7 @@ InModuleScope Pslogg {
     {
         $script:_logConfiguration = GetNewConfiguration
         $script:_messageFormatInfo = GetNewMessageFormatInfo
-        $script:_logFilePath = GetNewLogFilePath
+        $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
         $script:_logFileOverwritten = $True
     }
 
@@ -337,12 +338,15 @@ InModuleScope Pslogg {
         (
             [hashtable]$ReferenceHashTable, 
             [hashtable]$HashTableToTest, 
-            [switch]$ShouldBeNotEqual
+            [switch]$ShouldBeNotEqual,
+            [switch]$ValueTypesOnly
         ) 
     {
         $differences = GetHashTableDifferences `
             -HashTable1 $ReferenceHashTable `
-            -HashTable2 $HashTableToTest
+            -HashTable2 $HashTableToTest `
+            -ValueTypesOnly:$ValueTypesOnly
+
         if ($ShouldBeNotEqual)
         {
             $differences | Should -Not -Be @()
@@ -360,7 +364,8 @@ InModuleScope Pslogg {
         ) 
     {
         AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
-            -HashTableToTest $script:_logConfiguration -ShouldBeNotEqual:$ShouldBeNotEqual
+            -HashTableToTest $script:_logConfiguration -ShouldBeNotEqual:$ShouldBeNotEqual `
+            -ValueTypesOnly
     }
 
     function AssertMessageFormatInfoMatchesReference 
@@ -464,7 +469,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
             }
 
             It 'includes date stamp in LogFilePath if new configuration LogFile.IncludeDateInFileName set' {
@@ -474,7 +479,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
             }
 
             It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
@@ -489,7 +494,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
@@ -575,7 +580,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
             }
 
             It 'includes date stamp in LogFilePath if LogFile.IncludeDateInFileName set' {
@@ -585,7 +590,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
             }
 
             It 'does not include date stamp in LogFilePath if LogFile.IncludeDateInFileName cleared' {
@@ -595,7 +600,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
             }
 
             It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
@@ -610,7 +615,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
@@ -654,7 +659,7 @@ InModuleScope Pslogg {
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -IncludeDateInFileName
@@ -665,7 +670,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath -IncludeDateInFileName
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -IncludeDateInFileName
@@ -709,7 +714,7 @@ InModuleScope Pslogg {
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath -IncludeDateInFileName
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -ExcludeDateFromFileName
@@ -720,7 +725,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logFilePath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -ExcludeDateFromFileName
@@ -1156,7 +1161,7 @@ InModuleScope Pslogg {
                 AssertMessageFormatInfoMatchesReference `
                     -ReferenceHashTable $referenceMessageFormatInfo
 
-                $script:_logFilePath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
                 $script:_logFileOverwritten | Should -Be $False
             }
         }
@@ -1199,7 +1204,7 @@ InModuleScope Pslogg {
             AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
 
             $newLogFilePath = GetNewLogFilePath
-            $script:_logFilePath | Should -Be $newLogFilePath
+            $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
 
             $script:_logFileOverwritten | Should -Be $True
         }
@@ -1220,12 +1225,12 @@ InModuleScope Pslogg {
             AssertMessageFormatInfoMatchesReference -ReferenceHashTable $defaultMessageFormatInfo
         }
 
-        It 'resets LogFilePath to default value' {
+        It 'resets LogFile.FullPath to default value' {
 
             Reset-LogConfiguration
 
             $defaultLogFilePath = GetDefaultLogFilePath
-            $script:_logFilePath | Should -Be $defaultLogFilePath
+            $script:_logConfiguration.LogFile.FullPath | Should -Be $defaultLogFilePath
         }
 
         It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
@@ -1239,7 +1244,7 @@ InModuleScope Pslogg {
 
         It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
             $script:_logConfiguration.LogFile.Name = $script:_defaultLogConfiguration.LogFile.Name
-            $script:_logFilePath = GetDefaultLogFilePath
+            $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
             $script:_logFileOverwritten = $True
 
             Reset-LogConfiguration

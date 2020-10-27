@@ -528,7 +528,7 @@ function Write-LogMessage
         return
     }
 
-    if (-not (Test-Path $script:_logFilePath -IsValid))
+    if (-not (Test-Path $script:_logConfiguration.LogFile.FullPath -IsValid))
     {
         # Fail silently so that every message output to the console doesn't include an error 
         # message.
@@ -542,12 +542,12 @@ function Write-LogMessage
     }
     if ($overwriteLogFile -and (-not $script:_logFileOverwritten))
     {
-        Set-Content -Path $script:_logFilePath -Value $textToLog
+        Set-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
         $script:_logFileOverwritten = $True
     }
     else
     {
-        Add-Content -Path $script:_logFilePath -Value $textToLog
+        Add-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
     }
 }
 

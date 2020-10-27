@@ -40,13 +40,17 @@ A hash table with the following keys:
         
         The hash table has the following keys:
 
-            Name: The path to the log file.  If LogFile.Name is $Null, empty or blank log then 
+            Name: The name of the log file.  If LogFile.Name is $Null, empty or blank then 
                 messages will be written to the PowerShell host or PowerShell streams but not 
                 written to a log file.  
                 
                 If LogFile.Name is specified without a path, or with a relative path, it will be 
-                relative to the directory of the calling script, not this module.  The default 
-                value for Log.FileName is "Results.log";
+                relative to the directory of the calling script, not this module.  
+                
+                The LogFile.Name is the raw file name before the path is resolved, and before 
+                any date is appended.
+                
+                The default value for Log.FileName is "Results.log";  
 
             IncludeDateInFileName: If $True then the log file name will have a date, of the form 
                 '_yyyyMMdd' appended to the end of the file name.  For example, 
@@ -63,6 +67,10 @@ A hash table with the following keys:
                 of Log.OverwriteLogFile.  
         
                 The default value is $True;
+
+            FullPath: The fully resolved path to the log file.  This will include the date if 
+                LogFile.IncludeDateInFileName is set.  It will also be the full absolute path 
+                to the log file, rather than a relative path.
 
     WriteToHost: If $True then all log messages will be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
@@ -683,11 +691,14 @@ function Set-LogConfiguration
         [string]$VerboseTextColor
     )
 
+    # Will be $Null if LogFile.FullPath does not exist.
+    $oldLogFilePath = $script:_logConfiguration.LogFile.FullPath
+
     if ($LogConfiguration -ne $Null)
     {
         $script:_logConfiguration = Private_DeepCopyHashTable $LogConfiguration
         Private_SetMessageFormat $LogConfiguration.MessageFormat
-        Private_SetLogFilePath
+        Private_SetLogFilePath -OldLogFilePath $oldLogFilePath
         return
     }
 
@@ -710,19 +721,19 @@ function Set-LogConfiguration
     if (![string]::IsNullOrWhiteSpace($LogFileName))
     {
         $script:_logConfiguration.LogFile.Name = $LogFileName
-        Private_SetLogFilePath
+        Private_SetLogFilePath -OldLogFilePath $oldLogFilePath
     }
 
     if ($ExcludeDateFromFileName.IsPresent)
     {
         $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
-        Private_SetLogFilePath
+        Private_SetLogFilePath -OldLogFilePath $oldLogFilePath
     }
 
     if ($IncludeDateInFileName.IsPresent)
     {
         $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
-        Private_SetLogFilePath
+        Private_SetLogFilePath -OldLogFilePath $oldLogFilePath
     }
 
     if ($AppendToLogFile.IsPresent)
@@ -929,28 +940,26 @@ function Private_GetAbsolutePath (
 Sets the full path to the log file.
 
 .DESCRIPTION
-Sets module variable $_logFilePath.  If $_logFilePath has changed then $_logFileOverwritten 
-will be cleared.
+Sets configuration setting LogFile.FullPath.  If LogFile.FullPath is changed from the previous 
+value then $_logFileOverwritten will be cleared.
 
-Determines whether the LogFile.Name specified in the configuration settings is an absolute or a 
-relative path.  If it is relative then the path to the directory the calling script is running 
-in will be prepended to the specified LogFile.Name.
+The function checks whether the LogFile.Name specified in the configuration settings is an 
+absolute or a relative path.  If it is relative then the path to the directory the calling script 
+is running in will be prepended to the specified LogFile.Name when setting LogFile.FullPath.
 
 If configuration setting LogFile.IncludeDateInFileName is $True then the date will be included in 
-the log file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For example, 
-"Results_20171129.log".
+the LogFile.FullPath file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For 
+example, "Results_20171129.log".
 
 .NOTES
 This function is NOT intended to be exported from this module.
 
 #>
-function Private_SetLogFilePath ()
+function Private_SetLogFilePath ([string]$OldLogFilePath)
 {
-    $oldLogFilePath = $script:_logFilePath
-
     if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
     {
-        $script:_logFilePath = ''
+        $script:_logConfiguration.LogFile.FullPath = ''
         return
     }
 
@@ -968,9 +977,9 @@ function Private_SetLogFilePath ()
         $logFilePath = [System.IO.Path]::Combine($directory, $fileName + $fileExtension)
     }
 
-    $script:_logFilePath = $logFilePath
+    $script:_logConfiguration.LogFile.FullPath = $logFilePath
 
-    if ($script:_logFilePath -ne $oldLogFilePath)
+    if ($script:_logConfiguration.LogFile.FullPath -ne $OldLogFilePath)
     {
         $script:_logFileOverwritten = $False
     }
