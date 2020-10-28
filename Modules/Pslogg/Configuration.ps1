@@ -68,9 +68,13 @@ A hash table with the following keys:
         
                 The default value is $True;
 
-            FullPath: The fully resolved path to the log file.  This will include the date if 
-                LogFile.IncludeDateInFileName is set.  It will also be the full absolute path 
-                to the log file, rather than a relative path.
+            FullPath: The fully resolved path to the current log file.  This will include the date 
+                if LogFile.IncludeDateInFileName is set.  It will also be the full absolute path 
+                to the log file, rather than a relative path.  
+                
+                Any date included in the file name may not necessarily be today's date; the file 
+                name returned is simply the name of the file Pslogg is currently configured to 
+                write to, whatever that name may be.
 
     WriteToHost: If $True then all log messages will be written to the host.  If $False then log 
         messages will be written to the appropriate stream.  For example, Error messages will be 
@@ -217,12 +221,26 @@ Get the text color for messages of level ERROR:
     Red
 
 .EXAMPLE
-Get the name of the file messages will be logged to:
+Get the name of the file that messages will be logged to:
 
     PS C:\Users\Me> $config = Get-LogConfiguration
     PS C:\Users\Me> $config.LogFile.Name 
 
     Results.log
+
+The name returned is the "raw" file name.  It will not include a date, if Pslogg is configured to 
+include dates in log file names.
+
+.EXAMPLE
+Get the full path of the file that messages will be logged to:
+
+    PS C:\Users\Me> $config = Get-LogConfiguration
+    PS C:\Users\Me> $config.LogFile.FullPath 
+
+    C:\Users\Me\Documents\PowerShell\MyTest\Results_20201027.log
+
+In contrast to $config.LogFile.Name, $config.LogFile.FullPath is the absolute path to the log 
+file.  It will include the date, if Pslogg is configured to include dates in log file names.  
 
 .EXAMPLE
 Get the format of log messages:
@@ -294,7 +312,7 @@ The path to the log file.  If LogFile.Name is $Null, empty or blank log then mes
 be written to the PowerShell host or PowerShell streams but not written to a log file.  
                 
 If LogFile.Name is specified without a path, or with a relative path, it will be relative to 
-the directory of the calling script, not this module.  The default value for Log.FileName is 
+the directory of the calling script, not this module.  The default value for LogFile.Name is 
 'Results.log'.
 
 .PARAMETER IncludeDateInFileName
@@ -442,17 +460,17 @@ for log messages written to the host.
 
 The hash table must have the following keys:
 
-    Error: The text color for messages of log level Error.  The default value is Red;
+    Error: The text color for messages of log level Error.  The default value is 'Red';
 
     Warning: The text color for messages of log level Warning.  The default value is 
-        Yellow;
+        'Yellow';
 
     Information: The text color for messages of log level Information.  The default 
-        value is Cyan;
+        value is 'Cyan';
 
-    Debug: The text color for messages of log level Debug.  The default value is White;
+    Debug: The text color for messages of log level Debug.  The default value is 'White';
 
-    Verbose: The text color for messages of log level Verbose.  The default value is White.  
+    Verbose: The text color for messages of log level Verbose.  The default value is 'White'.  
 
 Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
