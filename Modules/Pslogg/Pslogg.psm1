@@ -341,28 +341,28 @@ function Write-LogMessage
         [string]$MessageFormat,      
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelText')]
+                    ParameterSetName='MessageLevelText')]
         [ValidateScript({ Private_ValidateLogLevel -LevelToTest $_ -ExcludeOffLevel })]
         [string]$MessageLevel,
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelSwitches')]
+                    ParameterSetName='MessageLevelSwitches')]
         [switch]$IsError, 
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelSwitches')]
+                    ParameterSetName='MessageLevelSwitches')]
         [switch]$IsWarning,
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelSwitches')]
+                    ParameterSetName='MessageLevelSwitches')]
         [switch]$IsInformation, 
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelSwitches')]
+                    ParameterSetName='MessageLevelSwitches')]
         [switch]$IsDebug, 
 
         [Parameter(Mandatory=$False,
-                     ParameterSetName='MessageLevelSwitches')]
+                    ParameterSetName='MessageLevelSwitches')]
         [switch]$IsVerbose, 
 
         [Parameter(Mandatory=$False)]
