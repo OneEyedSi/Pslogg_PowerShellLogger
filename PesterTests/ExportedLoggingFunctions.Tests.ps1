@@ -36,9 +36,6 @@ BeforeDiscovery {
 
 InModuleScope Pslogg {
     BeforeAll {
-        # Need to dot source the helper file within the InModuleScope block to be able to use its 
-        # functions within a test.
-        . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
 
         # Gets the MessageFormatInfo hashtable that matches the default configuration.
         function GetDefaultMessageFormatInfo ()
@@ -334,8 +331,8 @@ InModuleScope Pslogg {
 
             It 'throws exception when an invalid -HostTextColor is specified' {
                 { Write-LogMessage -Message 'hello world' -HostTextColor DeepPurple } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException `
-                        -WithMessage "'DeepPurple' is not a valid text color"                                       
+                    Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                        -ExpectedMessage "*'DeepPurple' is not a valid text color*"                                  
             }
 
             It 'does not throw exception when no -HostTextColor is specified' {
@@ -357,8 +354,8 @@ InModuleScope Pslogg {
 
             It 'throws exception when an invalid -MessageLevel is specified' {
                 { Write-LogMessage 'hello world' -MessageLevel INVALID } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingValidationException `
-                        -WithMessage "Cannot validate argument on parameter 'MessageLevel'"                                       
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Cannot validate argument on parameter 'MessageLevel'*"                                   
             }
 
             It 'does not throw exception when valid -MessageLevel is specified' {
@@ -368,98 +365,98 @@ InModuleScope Pslogg {
 
             It 'throws exception when both -MessageLevel and -IsError are specified' {
                 { Write-LogMessage 'hello world' -MessageLevel ERROR -IsError } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
-                        -WithMessage 'Parameter set cannot be resolved'
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Parameter set cannot be resolved*" 
             }
 
             It 'throws exception when both -MessageLevel and -IsWarning are specified' {
                 { Write-LogMessage 'hello world' -MessageLevel ERROR -IsWarning } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
-                        -WithMessage 'Parameter set cannot be resolved'
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Parameter set cannot be resolved*"  
             }
 
             It 'throws exception when both -MessageLevel and -IsInformation are specified' {
                 { Write-LogMessage 'hello world' -MessageLevel ERROR -IsInformation } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
-                        -WithMessage 'Parameter set cannot be resolved'
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Parameter set cannot be resolved*"  
             }
 
             It 'throws exception when both -MessageLevel and -IsDebug are specified' {
                 { Write-LogMessage 'hello world' -MessageLevel ERROR -IsDebug } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
-                        -WithMessage 'Parameter set cannot be resolved'
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Parameter set cannot be resolved*"   
             }
 
             It 'throws exception when both -MessageLevel and -IsVerbose are specified' {
                 { Write-LogMessage 'hello world' -MessageLevel ERROR -IsVerbose } | 
-                    Assert-ExceptionThrown -WithTypeName ParameterBindingException `
-                        -WithMessage 'Parameter set cannot be resolved'
+                Should -Throw -ExceptionType ([System.Management.Automation.ParameterBindingException]) `
+                    -ExpectedMessage "*Parameter set cannot be resolved*"  
             }
 
             It 'throws exception when both -IsError and -IsWarning switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsWarning } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                      
             }
 
             It 'throws exception when both -IsError and -IsInformation switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsInformation } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                     
             }
 
             It 'throws exception when both -IsError and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsDebug } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                      
             }
 
             It 'throws exception when both -IsError and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsError -IsVerbose } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                     
             }
 
             It 'throws exception when both -IsWarning and -IsInformation switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsInformation } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                     
             }
 
             It 'throws exception when both -IsWarning and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsDebug } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                       
             }
 
             It 'throws exception when both -IsWarning and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsWarning -IsVerbose } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                        
             }
 
             It 'throws exception when both -IsInformation and -IsDebug switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsDebug } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                      
             }
 
             It 'throws exception when both -IsInformation and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsInformation -IsVerbose } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                       
             }
 
             It 'throws exception when both -IsDebug and -IsVerbose switches set' {
                 { Write-LogMessage -Message 'hello world' -IsDebug -IsVerbose } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Message Level switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Message Level switch parameter may be set*"                                      
             }
 
             It 'throws exception when both -WriteToHost and -WriteToStreams switches set' {
                 { Write-LogMessage -Message 'hello world' -WriteToHost -WriteToStreams } | 
-                    Assert-ExceptionThrown -WithTypeName ArgumentException `
-                        -WithMessage 'Only one Destination switch parameter may be set'                                        
+                Should -Throw -ExceptionType ([ArgumentException]) `
+                    -ExpectedMessage "*Only one Destination switch parameter may be set*"                                       
             }
         }
 

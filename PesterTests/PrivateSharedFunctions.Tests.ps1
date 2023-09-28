@@ -36,11 +36,6 @@ BeforeDiscovery {
 }
 
 InModuleScope Pslogg {
-    BeforeAll {
-        # Need to dot source the helper file within the InModuleScope block to be able to use its 
-        # functions within a test.
-        . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
-    }
 
     Describe "ValidateSwitchParameterGroup" {
     
@@ -154,14 +149,14 @@ InModuleScope Pslogg {
             [string]$colourName = 'Turquoise'
             
             { Private_ValidateHostColor -ColorToTest $colourName} | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException])
         }
 
         It 'exception error message includes "INVALID TEXT COLOR ERROR: $colourName" when color name is invalid' {
             [string]$colourName = 'Turquoise'
             
             { Private_ValidateHostColor -ColorToTest $colourName} | 
-                Assert-ExceptionThrown -WithMessage "INVALID TEXT COLOR ERROR: '$colourName'"
+                Should -Throw -ExpectedMessage "*INVALID TEXT COLOR ERROR: '$colourName'*" 
         }
     }
 
@@ -185,21 +180,21 @@ InModuleScope Pslogg {
             [string]$logLevel = 'INVALID'
 
             { Private_ValidateLogLevel -LevelToTest $logLevel } | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException]) 
         }
 
         It 'exception error message includes "INVALID LOG LEVEL ERROR: $logLevel" when log level is invalid' {
             [string]$logLevel = 'INVALID'
             
              { Private_ValidateLogLevel -LevelToTest $logLevel } | 
-                Assert-ExceptionThrown -WithMessage "INVALID LOG LEVEL ERROR: '$logLevel'"
+                Should -Throw -ExpectedMessage "*NVALID LOG LEVEL ERROR: '$logLevel'*" 
         }
 
         It 'throws ArgumentException when log level is OFF and -ExcludeOffLevel switch is set' {
             [string]$logLevel = 'OFF'
 
             { Private_ValidateLogLevel -LevelToTest $logLevel -ExcludeOffLevel } | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException]) 
         }
 
         It 'does not throw when log level is OFF and -ExcludeOffLevel switch is not set' {
