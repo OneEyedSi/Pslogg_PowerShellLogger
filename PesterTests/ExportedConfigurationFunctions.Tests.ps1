@@ -6,376 +6,387 @@ Tests of the exported configuration functions in the Pslogg module.
 Pester tests of the configuration-related functions exported from the Pslogg module.
 #>
 
-# PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
-# remove all Pslogg modules and re-import only one.
-Get-Module Pslogg | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
-# adjacent to the folder containing this script, regardless of the location that Pester is 
-# invoked from:
-#                                     {parent folder}
-#                                             |
-#                   -----------------------------------------------------
-#                   |                                                   |
-#     {folder containing this script}                                Modules folder
-#                   \                                                   |
-#                    ------------------> imports                     Pslogg module folder
-#                                                \                      |
-#                                                 -----------------> Pslogg.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+BeforeDiscovery {
+    # NOTE: The module under test has to be imported in a BeforeDiscovery block, not a 
+    # BeforeAll block.  If placed in a BeforeAll block the tests will fail with the following 
+    # message:
+    #   Discovery in ... failed with:
+    #   System.Management.Automation.RuntimeException: No modules named 'Pslogg' are currently 
+    #   loaded.
+
+    # PowerShell allows multiple modules of the same name to be imported from different locations.  
+    # This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+    # remove all Pslogg modules and re-import only one.
+    Get-Module Pslogg | Remove-Module -Force
+
+    # Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
+    # adjacent to the folder containing this script, regardless of the location that Pester is 
+    # invoked from:
+    #                                     {parent folder}
+    #                                             |
+    #                   -----------------------------------------------------
+    #                   |                                                   |
+    #     {folder containing this script}                                Modules folder
+    #                   |                                                   |
+    #                   |                                                Pslogg module folder
+    #                   |                                                   |
+    #               This script -------------> imports --------------->  Pslogg.psd1 module script
+    Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+}
 
 InModuleScope Pslogg {
+    BeforeAll {
+        # Need to dot source the helper file within the InModuleScope block to be able to use its 
+        # functions within a test.
+        . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
 
-    # Need to dot source the helper file within the InModuleScope block to be able to use its 
-    # functions within a test.
-    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+        <#
+        .SYNOPSIS
+        Compares two hashtables and returns an array of error messages describing the differences.
 
-    <#
-    .SYNOPSIS
-    Compares two hashtables and returns an array of error messages describing the differences.
+        .DESCRIPTION
+        Compares two hash tables and returns an array of error messages describing the differences.  If 
+        there are no differences the array will be empty.
 
-    .DESCRIPTION
-    Compares two hash tables and returns an array of error messages describing the differences.  If 
-    there are no differences the array will be empty.
+        .NOTES
+        The function only deals with hashtable values of the following data types:
+            Value types, such as integers;
+            Strings;
+            Arrays;
+            Hashtables
 
-    .NOTES
-    The function only deals with hashtable values of the following data types:
-        Value types, such as integers;
-        Strings;
-        Arrays;
-        Hashtables
+        It specifically cannot deal with values that are reference types, such as objects.  While it can 
+        deal with values that are arrays, it assumes those arrays do not contain reference types or 
+        nested hashtables.
 
-    It specifically cannot deal with values that are reference types, such as objects.  While it can 
-    deal with values that are arrays, it assumes those arrays do not contain reference types or 
-    nested hashtables.
+        .INPUTS
+        Two hashtables.
 
-    .INPUTS
-    Two hashtables.
-
-    .OUTPUTS
-    An array of strings.
-    #>
-    function GetHashTableDifferences (
-        [hashtable]$HashTable1,
-        [hashtable]$HashTable2, 
-        [int]$IndentLevel = 0,
-        [switch]$ValueTypesOnly
-    )
-    {
-        $spacesPerIndent = 4
-        $indentSpaces = ' ' * $spacesPerIndent * $IndentLevel
-
-        if ($HashTable1 -eq $Null)
+        .OUTPUTS
+        An array of strings.
+        #>
+        function GetHashTableDifferences (
+            [hashtable]$HashTable1,
+            [hashtable]$HashTable2, 
+            [int]$IndentLevel = 0,
+            [switch]$ValueTypesOnly
+        )
         {
+            $spacesPerIndent = 4
+            $indentSpaces = ' ' * $spacesPerIndent * $IndentLevel
+
+            if ($HashTable1 -eq $Null)
+            {
+                if ($HashTable2 -eq $Null)
+                {
+                    return @()
+                }
+                return @($indentSpaces + 'Hashtable 1 is $Null')
+            }
+            # HashTable1 must be non-null...
             if ($HashTable2 -eq $Null)
+            {
+                return @($indentSpaces + 'Hashtable 2 is $Null')
+            }
+            # Both hashtables are non-null...
+
+            # Reference equality: Both hashtables reference the same hashtable object.
+            if ($HashTable1 -eq $HashTable2)
             {
                 return @()
             }
-            return @($indentSpaces + 'Hashtable 1 is $Null')
-        }
-        # HashTable1 must be non-null...
-        if ($HashTable2 -eq $Null)
-        {
-            return @($indentSpaces + 'Hashtable 2 is $Null')
-        }
-        # Both hashtables are non-null...
 
-        # Reference equality: Both hashtables reference the same hashtable object.
-        if ($HashTable1 -eq $HashTable2)
-        {
-            return @()
-        }
+            # The two hashtables are not pointing to the same object...
 
-        # The two hashtables are not pointing to the same object...
+            $returnArray = @()
 
-        $returnArray = @()
-
-        # Compare-Object doesn't work on the hashtable.Keys collections.  It assumes all keys in 
-        # hashtable 1 are missing from 2 and vice versa.  Compare-Object works properly if the 
-        # Keys collections are converted to arrays first.
-        # CopyTo will only work if the keys array is created with the right length first.
-        $keys1 = @($Null) * $HashTable1.Keys.Count
-        $HashTable1.Keys.CopyTo($keys1, 0)
-        $keys2 = @($Null) * $HashTable2.Keys.Count
-        $HashTable2.Keys.CopyTo($keys2, 0)
-        # 
-        # Result will be a list of the keys that exist in one hashtable but not the other.  If all 
-        # keys match an empty array will be returned.
-        $result = Compare-Object -ReferenceObject $keys1 -DifferenceObject $keys2
-        if ($result)
-        {
-            $keysMissingFrom2 = $result | 
-                Where-Object {$_.SideIndicator -eq '<='} | 
-                Select-Object InputObject -ExpandProperty InputObject
-            if ($keysMissingFrom2)
-            {            
-                $returnArray += "${indentSpaces}Keys missing from hashtable 2: $($keysMissingFrom2 -join ', ')"
-            }
-
-            $keysAddedTo2 = $result | 
-                Where-Object {$_.SideIndicator -eq '=>'} | 
-                Select-Object InputObject -ExpandProperty InputObject
-            if ($keysAddedTo2)
-            {            
-                $returnArray += "${indentSpaces}Keys added to hashtable 2: $($keysAddedTo2 -join ', ')"
-            }
-        }
-
-        foreach ($key in $HashTable1.Keys)
-        {
-            $value1 = $hashTable1[$key]
-            $typeName1 = $value1.GetType().FullName
-
-            if (-not $HashTable2.ContainsKey($key))
-            {
-                continue
-            }
-
-            $value2 = $HashTable2[$key]
-            $typeName2 = $value2.GetType().FullName
-
-            if ($typeName1 -ne $typeName2)
-            {
-                $returnArray += "${indentSpaces}The data types of key [${key}] differ in the hashtables:  Hashtable 1 data type: $typeName1; Hashtable 2 data type: $typeName2" 
-                continue
-            }
-
-            # $typeName1 and ...2 are identical, ie the values for the matching keys are of the same 
-            # data type in the two hashtables...
-
-            # Compare-Object, at the parent hashtable level, will always assume nested hashtables are 
-            # identical, even if they aren't.  So treat nested hashtables as a special case.
-            if ($typeName1 -eq 'System.Collections.Hashtable' -and -not $ValueTypesOnly)
-            {            
-                $nestedHashTableDifferences = GetHashTableDifferences `
-                    -HashTable1 $value1 -HashTable2 $value2 -IndentLevel ($IndentLevel + 1)
-                if ($nestedHashTableDifferences)
-                {
-                    $returnArray += "${indentSpaces}The nested hashtables at key [${key}] differ:"
-                    $returnArray += $nestedHashTableDifferences
-                    continue
-                }
-            }
-
-            # Arrays, strings and value types can be compared via Compare-Object.
-            # ASSUMPTION: That no values are reference types and any arrays do not contain 
-            # reference types or hashtables.
-
-            # SyncWindow = 0 ensures arrays will be compared in element order.  If one array is 
-            # @(1, 2, 3) and the other is @(3, 2, 1) with SyncWindow = 0 these would be seen as 
-            # different.  Leaving out the SyncWindow parameter or setting it to a larger number the 
-            # two arrays would be seen as identical.
-            $result = Compare-Object -ReferenceObject $value1 -DifferenceObject $value2 -SyncWindow 0
+            # Compare-Object doesn't work on the hashtable.Keys collections.  It assumes all keys in 
+            # hashtable 1 are missing from 2 and vice versa.  Compare-Object works properly if the 
+            # Keys collections are converted to arrays first.
+            # CopyTo will only work if the keys array is created with the right length first.
+            $keys1 = @($Null) * $HashTable1.Keys.Count
+            $HashTable1.Keys.CopyTo($keys1, 0)
+            $keys2 = @($Null) * $HashTable2.Keys.Count
+            $HashTable2.Keys.CopyTo($keys2, 0)
+            # 
+            # Result will be a list of the keys that exist in one hashtable but not the other.  If all 
+            # keys match an empty array will be returned.
+            $result = Compare-Object -ReferenceObject $keys1 -DifferenceObject $keys2
             if ($result)
             {
-                if ($typeName1 -eq 'System.String')
-                {
-                    $value1 = "'$value1'"
-                    $value2 = "'$value2'"
+                $keysMissingFrom2 = $result | 
+                    Where-Object {$_.SideIndicator -eq '<='} | 
+                    Select-Object InputObject -ExpandProperty InputObject
+                if ($keysMissingFrom2)
+                {            
+                    $returnArray += "${indentSpaces}Keys missing from hashtable 2: $($keysMissingFrom2 -join ', ')"
                 }
-                if ($typeName1 -eq 'System.Object[]')
-                {
-                    $value1 = "@($($value1 -join ', '))"
-                    $value2 = "@($($value2 -join ', '))"
+
+                $keysAddedTo2 = $result | 
+                    Where-Object {$_.SideIndicator -eq '=>'} | 
+                    Select-Object InputObject -ExpandProperty InputObject
+                if ($keysAddedTo2)
+                {            
+                    $returnArray += "${indentSpaces}Keys added to hashtable 2: $($keysAddedTo2 -join ', ')"
                 }
-                $returnArray += "${indentSpaces}The values at key [${key}] differ:  Hashtable 1 value: $value1; Hashtable 2 value: $value2"
             }
+
+            foreach ($key in $HashTable1.Keys)
+            {
+                $value1 = $hashTable1[$key]
+                $typeName1 = $value1.GetType().FullName
+
+                if (-not $HashTable2.ContainsKey($key))
+                {
+                    continue
+                }
+
+                $value2 = $HashTable2[$key]
+                $typeName2 = $value2.GetType().FullName
+
+                if ($typeName1 -ne $typeName2)
+                {
+                    $returnArray += "${indentSpaces}The data types of key [${key}] differ in the hashtables:  Hashtable 1 data type: $typeName1; Hashtable 2 data type: $typeName2" 
+                    continue
+                }
+
+                # $typeName1 and ...2 are identical, ie the values for the matching keys are of the same 
+                # data type in the two hashtables...
+
+                # Compare-Object, at the parent hashtable level, will always assume nested hashtables are 
+                # identical, even if they aren't.  So treat nested hashtables as a special case.
+                if ($typeName1 -eq 'System.Collections.Hashtable' -and -not $ValueTypesOnly)
+                {            
+                    $nestedHashTableDifferences = GetHashTableDifferences `
+                        -HashTable1 $value1 -HashTable2 $value2 -IndentLevel ($IndentLevel + 1)
+                    if ($nestedHashTableDifferences)
+                    {
+                        $returnArray += "${indentSpaces}The nested hashtables at key [${key}] differ:"
+                        $returnArray += $nestedHashTableDifferences
+                        continue
+                    }
+                }
+
+                # Arrays, strings and value types can be compared via Compare-Object.
+                # ASSUMPTION: That no values are reference types and any arrays do not contain 
+                # reference types or hashtables.
+
+                # SyncWindow = 0 ensures arrays will be compared in element order.  If one array is 
+                # @(1, 2, 3) and the other is @(3, 2, 1) with SyncWindow = 0 these would be seen as 
+                # different.  Leaving out the SyncWindow parameter or setting it to a larger number the 
+                # two arrays would be seen as identical.
+                $result = Compare-Object -ReferenceObject $value1 -DifferenceObject $value2 -SyncWindow 0
+                if ($result)
+                {
+                    if ($typeName1 -eq 'System.String')
+                    {
+                        $value1 = "'$value1'"
+                        $value2 = "'$value2'"
+                    }
+                    if ($typeName1 -eq 'System.Object[]')
+                    {
+                        $value1 = "@($($value1 -join ', '))"
+                        $value2 = "@($($value2 -join ', '))"
+                    }
+                    $returnArray += "${indentSpaces}The values at key [${key}] differ:  Hashtable 1 value: $value1; Hashtable 2 value: $value2"
+                }
+            }
+
+            return $returnArray
         }
 
-        return $returnArray
-    }
-
-    function GetNewConfigurationColour()
-    {
-        $hostTextColor = @{
-                            Error = "DarkYellow"
-                            Warning = "DarkYellow"
-                            Information = "DarkYellow"
-                            Debug = "DarkYellow"
-                            Verbose = "DarkYellow"
-                        }
-        return $hostTextColor
-    }
-
-    function GetDefaultCategoryInfo()
-    {
-        $categoryInfo = Private_DeepCopyHashTable $script:_defaultLogConfiguration.CategoryInfo
-        return $categoryInfo
-    }
-
-    function GetNewCategoryInfo()
-    {
-        $categoryInfo = GetDefaultCategoryInfo
-        $categoryInfo.Remove('Progress')
-        $categoryInfo.FileCopy = @{Color = 'DarkCyan'}
-        return $categoryInfo                     
-    }
-
-    function GetNewLogFileInfo()
-    {
-        $logFileInfo = @{
-                            Name = 'C:\Test\Test.txt'
-                            IncludeDateInFileName = $False
-                            Overwrite = $False
-                        }
-
-        return $logFileInfo
-    }
-
-    # Gets a configuration hashtable where every setting is different from the defaults.
-    function GetNewConfiguration ()
-    {
-        $logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
-        $logConfiguration.LogLevel = "Verbose"
-        $logConfiguration.WriteToHost = $False
-        $logConfiguration.MessageFormat = "{MessageLevel} | {Message}"
-        
-        $logFileInfo = GetNewLogFileInfo
-        $logConfiguration.LogFile = $logFileInfo
-
-        $hostTextColor = GetNewConfigurationColour
-        $logConfiguration.HostTextColor = $hostTextColor
-
-        $categoryInfo = GetNewCategoryInfo
-        $logConfiguration.CategoryInfo = $categoryInfo
-
-        return $logConfiguration
-    }
-
-    # Gets the new MessageFormat that matches the configuration returned from MessageFormatInfo.
-    function GetNewMessageFormat ()
-    {
-        $newConfiguration = GetNewConfiguration
-        return $newConfiguration.MessageFormat
-    }
-
-    # Gets the MessageFormatInfo hashtable that matches the configuration returned from 
-    # GetNewConfiguration.
-    function GetNewMessageFormatInfo ()
-    {
-        $messageFormatInfo = @{
-                                RawFormat = '{MessageLevel} | {Message}'
-                                WorkingFormat = '${MessageLevel} | ${Message}'
-                                FieldsPresent = @('Message', 'MessageLevel')
+        function GetNewConfigurationColour()
+        {
+            $hostTextColor = @{
+                                Error = "DarkYellow"
+                                Warning = "DarkYellow"
+                                Information = "DarkYellow"
+                                Debug = "DarkYellow"
+                                Verbose = "DarkYellow"
                             }
-        return $messageFormatInfo
-    }
+            return $hostTextColor
+        }
 
-    # Gets the MessageFormatInfo hashtable that matches the default configuration.
-    function GetDefaultMessageFormatInfo ()
-    {
-        $messageFormatInfo = @{
-                                RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
-                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
-                                FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel', 'Category')
+        function GetDefaultCategoryInfo()
+        {
+            $categoryInfo = Private_DeepCopyHashTable $script:_defaultLogConfiguration.CategoryInfo
+            return $categoryInfo
+        }
+
+        function GetNewCategoryInfo()
+        {
+            $categoryInfo = GetDefaultCategoryInfo
+            $categoryInfo.Remove('Progress')
+            $categoryInfo.FileCopy = @{Color = 'DarkCyan'}
+            return $categoryInfo                     
+        }
+
+        function GetNewLogFileInfo()
+        {
+            $logFileInfo = @{
+                                Name = 'C:\Test\Test.txt'
+                                IncludeDateInFileName = $False
+                                Overwrite = $False
                             }
-        return $messageFormatInfo
-    }
 
-    # Gets the LogFilePath that matches the configuration returned from GetNewConfiguration.
-    function GetNewLogFilePath ([switch]$IncludeDateInFileName)
-    {
-        if ($IncludeDateInFileName)
+            return $logFileInfo
+        }
+
+        # Gets a configuration hashtable where every setting is different from the defaults.
+        function GetNewConfiguration ()
+        {
+            $logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
+            $logConfiguration.LogLevel = "Verbose"
+            $logConfiguration.WriteToHost = $False
+            $logConfiguration.MessageFormat = "{MessageLevel} | {Message}"
+            
+            $logFileInfo = GetNewLogFileInfo
+            $logConfiguration.LogFile = $logFileInfo
+
+            $hostTextColor = GetNewConfigurationColour
+            $logConfiguration.HostTextColor = $hostTextColor
+
+            $categoryInfo = GetNewCategoryInfo
+            $logConfiguration.CategoryInfo = $categoryInfo
+
+            return $logConfiguration
+        }
+
+        # Gets the new MessageFormat that matches the configuration returned from MessageFormatInfo.
+        function GetNewMessageFormat ()
+        {
+            $newConfiguration = GetNewConfiguration
+            return $newConfiguration.MessageFormat
+        }
+
+        # Gets the MessageFormatInfo hashtable that matches the configuration returned from 
+        # GetNewConfiguration.
+        function GetNewMessageFormatInfo ()
+        {
+            $messageFormatInfo = @{
+                                    RawFormat = '{MessageLevel} | {Message}'
+                                    WorkingFormat = '${MessageLevel} | ${Message}'
+                                    FieldsPresent = @('Message', 'MessageLevel')
+                                }
+            return $messageFormatInfo
+        }
+
+        # Gets the MessageFormatInfo hashtable that matches the default configuration.
+        function GetDefaultMessageFormatInfo ()
+        {
+            $messageFormatInfo = @{
+                                    RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
+                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
+                                    FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel', 'Category')
+                                }
+            return $messageFormatInfo
+        }
+
+        # Gets the LogFilePath that matches the configuration returned from GetNewConfiguration.
+        function GetNewLogFilePath ([switch]$IncludeDateInFileName)
+        {
+            if ($IncludeDateInFileName)
+            {
+                $dateString = Get-Date -Format "_yyyyMMdd"
+                return "C:\Test\Test${dateString}.txt"
+            }
+
+            return 'C:\Test\Test.txt'
+        }
+
+        function GetCallingDirectoryPath ()
+        {
+            $callStack = Get-PSCallStack
+            $stackFrame = $callStack[0]
+            # Skip this function in the call stack as we've already read it.
+            $i = 1
+            while ($stackFrame.ScriptName -ne $Null -and $i -lt $callStack.Count)
+            {
+                $stackFrame = $callStack[$i]
+                if ($stackFrame.ScriptName -ne $Null)
+                {
+                    $stackFrameFileName = $stackFrame.ScriptName
+                }
+                $i++
+            }
+            $pathOfCallerDirectory = Split-Path -Path $stackFrameFileName -Parent
+            return $pathOfCallerDirectory
+        }
+
+        function GetDefaultLogFilePath ()
         {
             $dateString = Get-Date -Format "_yyyyMMdd"
-            return "C:\Test\Test${dateString}.txt"
+            $fileName = "Results${dateString}.log"
+            # Can't use $PSScriptRoot because it will return the folder containing this file, while 
+            # the Pslogg module will see the ultimate caller as the Pester module running this 
+            # test script.
+            $callingDirectoryPath = GetCallingDirectoryPath
+            $path = Join-Path $callingDirectoryPath $fileName
+            return $path
         }
 
-        return 'C:\Test\Test.txt'
-    }
+        # Sets the Pslogg configuration to its defaults.
+        function SetConfigurationToDefault ()
+        {
+            $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
+            $script:_messageFormatInfo = GetDefaultMessageFormatInfo
+            $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
+            $script:_logFileOverwritten = $False
+        }
 
-    function GetCallingDirectoryPath ()
-    {
-        $callStack = Get-PSCallStack
-        $stackFrame = $callStack[0]
-        # Skip this function in the call stack as we've already read it.
-	    $i = 1
-	    while ($stackFrame.ScriptName -ne $Null -and $i -lt $callStack.Count)
-	    {
-		    $stackFrame = $callStack[$i]
-            if ($stackFrame.ScriptName -ne $Null)
-		    {
-                $stackFrameFileName = $stackFrame.ScriptName
+        # Sets the Pslogg configuration so that every settings differs from the defaults.
+        function SetNewConfiguration ()
+        {
+            $script:_logConfiguration = GetNewConfiguration
+            $script:_messageFormatInfo = GetNewMessageFormatInfo
+            $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+            $script:_logFileOverwritten = $True
+        }
+
+        # Verifies the specified hashtable is identical to the reference hashtable.
+        function AssertHashTablesMatch 
+            (
+                [hashtable]$ReferenceHashTable, 
+                [hashtable]$HashTableToTest, 
+                [switch]$ShouldBeNotEqual,
+                [switch]$ValueTypesOnly
+            ) 
+        {
+            $differences = GetHashTableDifferences `
+                -HashTable1 $ReferenceHashTable `
+                -HashTable2 $HashTableToTest `
+                -ValueTypesOnly:$ValueTypesOnly
+
+            if ($ShouldBeNotEqual)
+            {
+                $differences | Should -Not -Be @()
             }
-		    $i++
-	    }
-        $pathOfCallerDirectory = Split-Path -Path $stackFrameFileName -Parent
-        return $pathOfCallerDirectory
-    }
-
-    function GetDefaultLogFilePath ()
-    {
-        $dateString = Get-Date -Format "_yyyyMMdd"
-        $fileName = "Results${dateString}.log"
-        # Can't use $PSScriptRoot because it will return the folder containing this file, while 
-        # the Pslogg module will see the ultimate caller as the Pester module running this 
-        # test script.
-        $callingDirectoryPath = GetCallingDirectoryPath
-        $path = Join-Path $callingDirectoryPath $fileName
-        return $path
-    }
-
-    # Sets the Pslogg configuration to its defaults.
-    function SetConfigurationToDefault ()
-    {
-        $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
-        $script:_messageFormatInfo = GetDefaultMessageFormatInfo
-        $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
-        $script:_logFileOverwritten = $False
-    }
-
-    # Sets the Pslogg configuration so that every settings differs from the defaults.
-    function SetNewConfiguration ()
-    {
-        $script:_logConfiguration = GetNewConfiguration
-        $script:_messageFormatInfo = GetNewMessageFormatInfo
-        $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
-        $script:_logFileOverwritten = $True
-    }
-
-    # Verifies the specified hashtable is identical to the reference hashtable.
-    function AssertHashTablesMatch 
-        (
-            [hashtable]$ReferenceHashTable, 
-            [hashtable]$HashTableToTest, 
-            [switch]$ShouldBeNotEqual,
-            [switch]$ValueTypesOnly
-        ) 
-    {
-        $differences = GetHashTableDifferences `
-            -HashTable1 $ReferenceHashTable `
-            -HashTable2 $HashTableToTest `
-            -ValueTypesOnly:$ValueTypesOnly
-
-        if ($ShouldBeNotEqual)
-        {
-            $differences | Should -Not -Be @()
+            else
+            {
+                $differences | Should -Be @()
+            }
         }
-        else
+
+        function AssertLogConfigurationMatchesReference 
+            (
+                [hashtable]$ReferenceHashTable, 
+                [switch]$ShouldBeNotEqual
+            ) 
         {
-            $differences | Should -Be @()
+            AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
+                -HashTableToTest $script:_logConfiguration -ShouldBeNotEqual:$ShouldBeNotEqual `
+                -ValueTypesOnly
         }
-    }
 
-    function AssertLogConfigurationMatchesReference 
-        (
-            [hashtable]$ReferenceHashTable, 
-            [switch]$ShouldBeNotEqual
-        ) 
-    {
-        AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
-            -HashTableToTest $script:_logConfiguration -ShouldBeNotEqual:$ShouldBeNotEqual `
-            -ValueTypesOnly
-    }
-
-    function AssertMessageFormatInfoMatchesReference 
-        (
-            [hashtable]$ReferenceHashTable, 
-            [switch]$ShouldBeNotEqual
-        ) 
-    {
-        AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
-            -HashTableToTest $script:_messageFormatInfo -ShouldBeNotEqual:$ShouldBeNotEqual
+        function AssertMessageFormatInfoMatchesReference 
+            (
+                [hashtable]$ReferenceHashTable, 
+                [switch]$ShouldBeNotEqual
+            ) 
+        {
+            AssertHashTablesMatch -ReferenceHashTable $ReferenceHashTable `
+                -HashTableToTest $script:_messageFormatInfo -ShouldBeNotEqual:$ShouldBeNotEqual
+        }
     }
 
     Describe 'Get-LogConfiguration' {     
@@ -1172,21 +1183,21 @@ InModuleScope Pslogg {
                 $newHostTextColours = GetNewConfigurationColour
 
                 { Set-LogConfiguration -IncludeDateInFileName -ExcludeDateFromFileName } | 
-                    Should -Throw 'Only one FileName switch parameter may be set'
+                    Should -Throw 'Only one FileName switch parameter may be set*'
             }
 
             It 'throws exception if switches OverwriteLogFile and AppendToLogFile are both set' {
                 $newHostTextColours = GetNewConfigurationColour
 
                 { Set-LogConfiguration -OverwriteLogFile -AppendToLogFile } | 
-                    Should -Throw 'Only one LogFileWriteBehavior switch parameter may be set'
+                    Should -Throw 'Only one LogFileWriteBehavior switch parameter may be set*'
             }
 
             It 'throws exception if switches WriteToHost and WriteToStreams are both set' {
                 $newHostTextColours = GetNewConfigurationColour
 
                 { Set-LogConfiguration -WriteToHost -WriteToStreams } | 
-                    Should -Throw 'Only one Destination switch parameter may be set'
+                    Should -Throw 'Only one Destination switch parameter may be set*'
             }
         }
     }

@@ -7,29 +7,40 @@ Pester tests of the private functions in the Pslogg module that are called by th
 configuration functions.
 #>
 
-# PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
-# remove all Pslogg modules and re-import only one.
-Get-Module Pslogg | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
-# adjacent to the folder containing this script, regardless of the location that Pester is 
-# invoked from:
-#                                     {parent folder}
-#                                             |
-#                   -----------------------------------------------------
-#                   |                                                   |
-#     {folder containing this script}                                Modules folder
-#                   \                                                   |
-#                    ------------------> imports                     Pslogg module folder
-#                                                \                      |
-#                                                 -----------------> Pslogg.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+BeforeDiscovery {
+    # NOTE: The module under test has to be imported in a BeforeDiscovery block, not a 
+    # BeforeAll block.  If placed in a BeforeAll block the tests will fail with the following 
+    # message:
+    #   Discovery in ... failed with:
+    #   System.Management.Automation.RuntimeException: No modules named 'Pslogg' are currently 
+    #   loaded.
+
+    # PowerShell allows multiple modules of the same name to be imported from different locations.  
+    # This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+    # remove all Pslogg modules and re-import only one.
+    Get-Module Pslogg | Remove-Module -Force
+
+    # Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
+    # adjacent to the folder containing this script, regardless of the location that Pester is 
+    # invoked from:
+    #                                     {parent folder}
+    #                                             |
+    #                   -----------------------------------------------------
+    #                   |                                                   |
+    #     {folder containing this script}                                Modules folder
+    #                   |                                                   |
+    #                   |                                                Pslogg module folder
+    #                   |                                                   |
+    #               This script -------------> imports --------------->  Pslogg.psd1 module script
+    Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+}
 
 InModuleScope Pslogg {
-
-    # Need to dot source the helper file within the InModuleScope block to be able to use its 
-    # functions within a test.
-    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+    BeforeAll {
+        # Need to dot source the helper file within the InModuleScope block to be able to use its 
+        # functions within a test.
+        . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
+    }
 
     Describe "GetAbsolutePath" {     
 
@@ -72,31 +83,33 @@ InModuleScope Pslogg {
         } 
     }
 
-    Describe "SetLogFilePath" {     
-        function GetFileNameFromTemplate ([string]$FileNameTemplate, [switch]$IncludeDateInFileName)
-        {
-            $dateText = ""
-            if ($IncludeDateInFileName)
+    Describe "SetLogFilePath" {    
+        BeforeAll { 
+            function GetFileNameFromTemplate ([string]$FileNameTemplate, [switch]$IncludeDateInFileName)
             {
-                $dateText = (Get-Date -Format "_yyyyMMdd")
+                $dateText = ""
+                if ($IncludeDateInFileName)
+                {
+                    $dateText = (Get-Date -Format "_yyyyMMdd")
+                }
+                return $ExecutionContext.InvokeCommand.ExpandString($FileNameTemplate)
             }
-            return $ExecutionContext.InvokeCommand.ExpandString($FileNameTemplate)
-        }
 
-        function TestLogFileConfiguration(
-            [string]$ExistingFileName,
-            [string]$NewFileNameTemplate,
-            [switch]$IncludeDateInFileName
-            )
-        {
-            $fileNameFromConfiguration = GetFileNameFromTemplate -FileNameTemplate $NewFileNameTemplate
+            function TestLogFileConfiguration(
+                [string]$ExistingFileName,
+                [string]$NewFileNameTemplate,
+                [switch]$IncludeDateInFileName
+                )
+            {
+                $fileNameFromConfiguration = GetFileNameFromTemplate -FileNameTemplate $NewFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath = $ExistingFileName
-            $script:_logConfiguration.LogFile.Name = $fileNameFromConfiguration
-            $script:_logConfiguration.LogFile.IncludeDateInFileName = $IncludeDateInFileName
-            $script:_logFileOverwritten = $True
+                $script:_logConfiguration.LogFile.FullPath = $ExistingFileName
+                $script:_logConfiguration.LogFile.Name = $fileNameFromConfiguration
+                $script:_logConfiguration.LogFile.IncludeDateInFileName = $IncludeDateInFileName
+                $script:_logFileOverwritten = $True
 
-            Private_SetLogFilePath -OldLogFilePath $ExistingFileName
+                Private_SetLogFilePath -OldLogFilePath $ExistingFileName
+            }
         }
 
         It 'sets $script:_logConfiguration.LogFile.FullPath to configuration LogFile.Name' {
@@ -279,21 +292,16 @@ InModuleScope Pslogg {
             $newMessageFormat = '{MessageLevel}: {Message}'
             Private_SetMessageFormat -MessageFormat $newMessageFormat  
             $script:_messageFormatInfo | Should -BeOfType [Hashtable]
-        }    
+        }  
 
-        function TestMessageFormatInfoHasKey([string]$Key)
-        {
-            It "creates element '$key' in MessageFormatInfo hashtable" {
-                $script:_messageFormatInfo = $Null
-                $newMessageFormat = '{MessageLevel}: {Message}'
-                Private_SetMessageFormat -MessageFormat $newMessageFormat
-                $script:_messageFormatInfo.ContainsKey($key) | Should -Be $True
-            }  
-        }
-
-        TestMessageFormatInfoHasKey RawFormat
-        TestMessageFormatInfoHasKey WorkingFormat
-        TestMessageFormatInfoHasKey FieldsPresent
+        It "creates element '<_>' in MessageFormatInfo hashtable" -ForEach (
+            'RawFormat', 'WorkingFormat', 'FieldsPresent'
+        ) {
+            $script:_messageFormatInfo = $Null
+            $newMessageFormat = '{MessageLevel}: {Message}'
+            Private_SetMessageFormat -MessageFormat $newMessageFormat
+            $script:_messageFormatInfo.ContainsKey($_) | Should -Be $True
+        }  
 
         It 'sets MessageFormatInfo.RawFormat equal to the specified string' {
             $script:_messageFormatInfo = $Null
