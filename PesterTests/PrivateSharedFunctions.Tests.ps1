@@ -7,29 +7,35 @@ Pester tests of the private functions in the Pslogg module that are called by bo
 configuration and the logging functions.
 #>
 
-# PowerShell allows multiple modules of the same name to be imported from different locations.  
-# This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
-# remove all Pslogg modules and re-import only one.
-Get-Module Pslogg | Remove-Module -Force
-# Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
-# adjacent to the folder containing this script, regardless of the location that Pester is 
-# invoked from:
-#                                     {parent folder}
-#                                             |
-#                   -----------------------------------------------------
-#                   |                                                   |
-#     {folder containing this script}                                Modules folder
-#                   \                                                   |
-#                    ------------------> imports                     Pslogg module folder
-#                                                \                      |
-#                                                 -----------------> Pslogg.psd1 module script
-Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+BeforeDiscovery {
+    # NOTE: The module under test has to be imported in a BeforeDiscovery block, not a 
+    # BeforeAll block.  If placed in a BeforeAll block the tests will fail with the following 
+    # message:
+    #   Discovery in ... failed with:
+    #   System.Management.Automation.RuntimeException: No modules named 'Pslogg' are currently 
+    #   loaded.
+
+    # PowerShell allows multiple modules of the same name to be imported from different locations.  
+    # This would confuse Pester.  So, to be sure there are not multiple Pslogg modules imported, 
+    # remove all Pslogg modules and re-import only one.
+    Get-Module Pslogg | Remove-Module -Force
+
+    # Use $PSScriptRoot so this script will always import the Pslogg module in the Modules folder 
+    # adjacent to the folder containing this script, regardless of the location that Pester is 
+    # invoked from:
+    #                                     {parent folder}
+    #                                             |
+    #                   -----------------------------------------------------
+    #                   |                                                   |
+    #     {folder containing this script}                                Modules folder
+    #                   |                                                   |
+    #                   |                                                Pslogg module folder
+    #                   |                                                   |
+    #               This script -------------> imports --------------->  Pslogg.psd1 module script
+    Import-Module (Join-Path $PSScriptRoot ..\Modules\Pslogg\Pslogg.psd1 -Resolve) -Force
+}
 
 InModuleScope Pslogg {
-
-    # Need to dot source the helper file within the InModuleScope block to be able to use its 
-    # functions within a test.
-    . (Join-Path $PSScriptRoot .\AssertExceptionThrown.ps1 -Resolve)
 
     Describe "ValidateSwitchParameterGroup" {
     
@@ -102,7 +108,7 @@ InModuleScope Pslogg {
             catch
             {
                 # One way of checking exception type.
-                $_.Exception.GetType().Name | Should Be 'ArgumentException'
+                $_.Exception.GetType().Name | Should -Be 'ArgumentException'
             }
         }
 
@@ -143,14 +149,14 @@ InModuleScope Pslogg {
             [string]$colourName = 'Turquoise'
             
             { Private_ValidateHostColor -ColorToTest $colourName} | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException])
         }
 
         It 'exception error message includes "INVALID TEXT COLOR ERROR: $colourName" when color name is invalid' {
             [string]$colourName = 'Turquoise'
             
             { Private_ValidateHostColor -ColorToTest $colourName} | 
-                Assert-ExceptionThrown -WithMessage "INVALID TEXT COLOR ERROR: '$colourName'"
+                Should -Throw -ExpectedMessage "*INVALID TEXT COLOR ERROR: '$colourName'*" 
         }
     }
 
@@ -174,21 +180,21 @@ InModuleScope Pslogg {
             [string]$logLevel = 'INVALID'
 
             { Private_ValidateLogLevel -LevelToTest $logLevel } | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException]) 
         }
 
         It 'exception error message includes "INVALID LOG LEVEL ERROR: $logLevel" when log level is invalid' {
             [string]$logLevel = 'INVALID'
             
              { Private_ValidateLogLevel -LevelToTest $logLevel } | 
-                Assert-ExceptionThrown -WithMessage "INVALID LOG LEVEL ERROR: '$logLevel'"
+                Should -Throw -ExpectedMessage "*NVALID LOG LEVEL ERROR: '$logLevel'*" 
         }
 
         It 'throws ArgumentException when log level is OFF and -ExcludeOffLevel switch is set' {
             [string]$logLevel = 'OFF'
 
             { Private_ValidateLogLevel -LevelToTest $logLevel -ExcludeOffLevel } | 
-                Assert-ExceptionThrown -WithTypeName ArgumentException
+                Should -Throw -ExceptionType ([ArgumentException]) 
         }
 
         It 'does not throw when log level is OFF and -ExcludeOffLevel switch is not set' {
@@ -275,6 +281,41 @@ InModuleScope Pslogg {
     }
 
     Describe "GetMessageFormatInfo" {    
+        BeforeAll {
+            function TestWorkingFormatFieldSurroundedBySpaces ([string]$FieldName)
+            {
+                $formatTemplate = 'xxx [FIELD PLACEHOLDER] xxx' 
+                TestWorkingFormatField -FieldName $FieldName -FormatTemplate $formatTemplate
+            }
+
+            function TestWorkingFormatField ([string]$FieldName, [string]$FormatTemplate)
+            {
+                $messageFormatTemplate = $FormatTemplate -replace "\[FIELD PLACEHOLDER\]", '{$FieldName}'
+                $workingFormatTemplate = $FormatTemplate -replace "\[FIELD PLACEHOLDER\]", '`${$${FieldName}}'
+                $messageFormat = $ExecutionContext.InvokeCommand.ExpandString($messageFormatTemplate)
+                $workingFormat = $ExecutionContext.InvokeCommand.ExpandString($workingFormatTemplate)
+                TestWorkingFormat -InputMessageFormat $messageFormat `
+                    -ExpectedWorkingFormat $workingFormat
+            }
+
+            function TestWorkingFormat 
+                (
+                    [string]$InputMessageFormat, 
+                    [string]$ExpectedWorkingFormat, 
+                    [switch]$DoRegexMatch
+                )
+            {
+                $hashTable = Private_GetMessageFormatInfo -MessageFormat $InputMessageFormat
+                if ($DoRegexMatch)
+                {
+                    $hashTable.WorkingFormat | Should -Match $ExpectedWorkingFormat
+                }
+                else
+                {
+                    $hashTable.WorkingFormat | Should -Be $ExpectedWorkingFormat
+                }
+            }
+        }
 
         It 'returns hashtable' {
             $messageFormat = 'xxx {Message} xxx'
@@ -317,40 +358,6 @@ InModuleScope Pslogg {
             $hashTable.WorkingFormat | Should -BeExactly $messageFormat
         }
 
-        function TestWorkingFormatFieldSurroundedBySpaces ([string]$FieldName)
-        {
-            $formatTemplate = 'xxx [FIELD PLACEHOLDER] xxx' 
-            TestWorkingFormatField -FieldName $FieldName -FormatTemplate $formatTemplate
-        }
-
-        function TestWorkingFormatField ([string]$FieldName, [string]$FormatTemplate)
-        {
-            $messageFormatTemplate = $FormatTemplate -replace "\[FIELD PLACEHOLDER\]", '{$FieldName}'
-            $workingFormatTemplate = $FormatTemplate -replace "\[FIELD PLACEHOLDER\]", '`${$${FieldName}}'
-            $messageFormat = $ExecutionContext.InvokeCommand.ExpandString($messageFormatTemplate)
-            $workingFormat = $ExecutionContext.InvokeCommand.ExpandString($workingFormatTemplate)
-            TestWorkingFormat -InputMessageFormat $messageFormat `
-                -ExpectedWorkingFormat $workingFormat
-        }
-
-        function TestWorkingFormat 
-            (
-                [string]$InputMessageFormat, 
-                [string]$ExpectedWorkingFormat, 
-                [switch]$DoRegexMatch
-            )
-        {
-            $hashTable = Private_GetMessageFormatInfo -MessageFormat $InputMessageFormat
-            if ($DoRegexMatch)
-            {
-                $hashTable.WorkingFormat | Should -Match $ExpectedWorkingFormat
-            }
-            else
-            {
-                $hashTable.WorkingFormat | Should -Be $ExpectedWorkingFormat
-            }
-        }
-
         It 'replaces {Message} placeholder with "${Message}" in WorkingFormat' {
             TestWorkingFormatFieldSurroundedBySpaces -FieldName Message
         }
@@ -367,21 +374,21 @@ InModuleScope Pslogg {
             TestWorkingFormatFieldSurroundedBySpaces -FieldName Category
         }
 
-        It 'replaces {TimeStamp} placeholder with "`$(`$Timestamp.ToString(<timestamp format>))" in WorkingFormat' {
+        It 'replaces {TimeStamp} placeholder with "$($Timestamp.ToString(`<timestamp format`>))" in WorkingFormat' {
             # Double the single quotes to escape them.
             TestWorkingFormat -InputMessageFormat 'xxx {Timestamp} xxx' `
                 -ExpectedWorkingFormat 'xxx \$\(\$Timestamp\.ToString\(''.*''\)\) xxx' `
                 -DoRegexMatch
         }
 
-        It 'uses default <timestamp format> in WorkingFormat when none specified' {
+        It 'uses default `<timestamp format`> in WorkingFormat when none specified' {
             $messageFormat = 'xxx {Timestamp} xxx'
             $workingFormat = 'xxx $($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
                 -ExpectedWorkingFormat $workingFormat
         }
 
-        It 'includes specified <timestamp format> in WorkingFormat when supplied' {
+        It 'includes specified `<timestamp format`> in WorkingFormat when supplied' {
             $messageFormat = 'xxx {Timestamp : d} xxx'
             $workingFormat = 'xxx $($Timestamp.ToString(''d'')) xxx'
             TestWorkingFormat -InputMessageFormat $messageFormat `
@@ -425,21 +432,15 @@ InModuleScope Pslogg {
             $hashTable.FieldsPresent.Count | Should -Be 0
         }
 
-        function TestFieldsPresent([string]$FieldName)
-        {
-            It "adds '$FieldName' to FieldsPresent array when {$FieldName} placeholder present in message format text" {
-                $messageFormat = "xxx {$FieldName} xxx"
-                $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
-                $hashTable.FieldsPresent.Count | Should -Be 1
-                $hashTable.FieldsPresent[0] | Should -Be $FieldName
-            }
+        It "adds '<_>' to FieldsPresent array when {<_>} placeholder present in message format text" -ForEach (
+            'Message', 'CallerName', 'MessageLevel', 'Category', 'Timestamp'
+        ) {
+            $fieldName = $_
+            $messageFormat = "xxx {$fieldName} xxx"
+            $hashTable = Private_GetMessageFormatInfo -MessageFormat $messageFormat
+            $hashTable.FieldsPresent.Count | Should -Be 1
+            $hashTable.FieldsPresent[0] | Should -Be $fieldName
         }
-
-        TestFieldsPresent "Message"
-        TestFieldsPresent "CallerName"
-        TestFieldsPresent "MessageLevel"
-        TestFieldsPresent "Category"
-        TestFieldsPresent "Timestamp"
 
         It 'adds multiple field names to FieldsPresent when multiple placeholders in message format text' {
             $messageFormat = 'xxx {MessageLevel} {CallerName} {Message} xxx'
