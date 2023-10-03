@@ -41,8 +41,8 @@ InModuleScope Pslogg {
         function GetDefaultMessageFormatInfo ()
         {
             $messageFormatInfo = @{
-                                    RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {MessageLevel} | {Message}'
-                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${MessageLevel} | ${Message}'
+                                    RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {MessageLevel} | {Message}'
+                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff'')) | ${CallerName} | ${MessageLevel} | ${Message}'
                                     FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel')
                                 }
             return $messageFormatInfo
@@ -946,7 +946,7 @@ InModuleScope Pslogg {
                     -FunctionUnderTest `
                         { 
                             Write-LogMessage -Message 'hello world' `
-                                            -MessageFormat '{Timestamp:hh:mm:ss}' `
+                                            -MessageFormat '{Timestamp:HH:mm:ss}' `
                                             -WriteToHost 
                         }
             }
@@ -1021,7 +1021,7 @@ InModuleScope Pslogg {
             }           
             
             It 'uses configuration MessageFormat when -MessageFormat parameter not specified' {
-                Private_SetMessageFormat '{Timestamp:hh:mm:ss.fff} | {Message}'
+                Private_SetMessageFormat '{Timestamp:HH:mm:ss.fff} | {Message}'
                 TestMessageFormat `
                     -ExpectedLoggedText '^\d\d:\d\d:\d\d\.\d\d\d | hello world$' `
                     -DoRegexMatch `

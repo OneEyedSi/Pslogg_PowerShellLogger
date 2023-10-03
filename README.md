@@ -218,7 +218,7 @@ log file.  It will include the date, if Pslogg is configured to include dates in
 PS C:\Users\Me> $config = Get-LogConfiguration
 PS C:\Users\Me> $config.MessageFormat 
 
-    {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
+    {Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
 ```
 
 ##### Use _Get-LogConfiguration_ and _Set-LogConfiguration_ to update Pslogg's configuration:
@@ -238,7 +238,7 @@ Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendTo
 ##### Set the LogLevel and MessageFormat using individual parameters:
 ```powershell
 Set-LogConfiguration -LogLevel Warning `
-    -MessageFormat '{Timestamp:yyyy-MM-dd hh:mm:ss},{Category},{Message}'
+    -MessageFormat '{Timestamp:yyyy-MM-dd HH:mm:ss},{Category},{Message}'
 ```
 
 ##### Set the text color used by the host to display messages with category 'FileCopy':

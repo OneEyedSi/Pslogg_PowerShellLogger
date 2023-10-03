@@ -272,8 +272,8 @@ InModuleScope Pslogg {
         function GetDefaultMessageFormatInfo ()
         {
             $messageFormatInfo = @{
-                                    RawFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
-                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd hh:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
+                                    RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
+                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
                                     FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel', 'Category')
                                 }
             return $messageFormatInfo
