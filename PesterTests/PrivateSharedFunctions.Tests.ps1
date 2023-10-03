@@ -270,13 +270,13 @@ InModuleScope Pslogg {
         }
 
         It 'returns format string containing colon' {
-            [string]$textToSearch = 'xxx {Timestamp:hh:mm:ss.fff} xxx'
-            Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be hh:mm:ss.fff
+            [string]$textToSearch = 'xxx {Timestamp:HH:mm:ss.fff} xxx'
+            Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be HH:mm:ss.fff
         }
 
         It 'returns format string containing space' {
-            [string]$textToSearch = 'xxx {Timestamp : yyyy-MM-dd hh:mm:ss.fff } xxx'
-            Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be 'yyyy-MM-dd hh:mm:ss.fff'
+            [string]$textToSearch = 'xxx {Timestamp : yyyy-MM-dd HH:mm:ss.fff } xxx'
+            Private_GetTimestampFormat -MessageFormat $textToSearch | Should -Be 'yyyy-MM-dd HH:mm:ss.fff'
         }
     }
 

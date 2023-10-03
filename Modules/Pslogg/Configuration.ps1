@@ -106,7 +106,7 @@ A hash table with the following keys:
                             will format the timestamp using the short date pattern, which is 
                             "MM/dd/yyyy" in the US.  
                             
-                            While the field names in the MessageFormat string are NOT case sentive 
+                            While the field names in the MessageFormat string are NOT case sensitive 
                             the datetime format string IS case sensitive.  This is because .NET 
                             datetime format strings are case sensitive.  For example "d" is the 
                             short date pattern while "D" is the long date pattern.  
@@ -132,7 +132,7 @@ A hash table with the following keys:
                             always be displayed in upper case.
 			
 		The default MessageFormat is: 
-		'{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}';
+		'{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}';
 
     HostTextColor: A hash table that specifies the different text colors that will be used for 
         different log levels, for log messages written to the host.  HostTextColor only applies 
@@ -248,7 +248,7 @@ Get the format of log messages:
     PS C:\Users\Me> $config = Get-LogConfiguration
     PS C:\Users\Me> $config.MessageFormat 
 
-    {Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
+    {Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}
 
 .EXAMPLE
 Use Get-LogConfiguration and Set-LogConfiguration to update Pslogg's configuration:
@@ -560,7 +560,7 @@ Set the details of the log file using individual parameters:
 Set the LogLevel and MessageFormat using individual parameters:
 
     Set-LogConfiguration -LogLevel Warning `
-	    -MessageFormat '{Timestamp:yyyy-MM-dd hh:mm:ss},{Category},{Message}'
+	    -MessageFormat '{Timestamp:yyyy-MM-dd HH:mm:ss},{Category},{Message}'
 
 .EXAMPLE
 Add a single CategoryInfo item using the tuple (two-element array) syntax:

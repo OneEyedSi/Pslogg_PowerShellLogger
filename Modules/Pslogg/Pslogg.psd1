@@ -12,7 +12,7 @@
 RootModule = 'Pslogg.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.1.2'
+ModuleVersion = '2.1.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -105,7 +105,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Bug fix: Remove invalid Unicode characters from .psm1 file'
+        ReleaseNotes = 'Bug fix: Change default timestamp format from 12 hour to 24 hour clock'
 
     } # End of PSData hashtable
 

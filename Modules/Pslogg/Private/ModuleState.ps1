@@ -26,7 +26,7 @@ $_defaultCategoryInfo = @{
 
 $_defaultLogConfiguration = @{   
                                 LogLevel = 'INFORMATION'
-								MessageFormat = '{Timestamp:yyyy-MM-dd hh:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
+								MessageFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
                                 WriteToHost = $True
                                 HostTextColor = $_defaultHostTextColor
                                 LogFile = @{
@@ -38,7 +38,7 @@ $_defaultLogConfiguration = @{
                                 CategoryInfo = $_defaultCategoryInfo
                             }
 
-$_defaultTimestampFormat = 'yyyy-MM-dd hh:mm:ss.fff'	
+$_defaultTimestampFormat = 'yyyy-MM-dd HH:mm:ss.fff'	
 						
 $_logConfiguration = @{}
 $_messageFormatInfo = @{}
