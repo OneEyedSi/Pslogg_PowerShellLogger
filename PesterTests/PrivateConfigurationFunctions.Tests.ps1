@@ -350,7 +350,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected argument to be either a hash table or an array but it is System.String*" 
+                    -ExpectedMessage "*Expected argument to be either a hashtable or an array but it is System.String*" 
         }
 
         It 'throws ArgumentException if CategoryInfoItem is empty array' {
@@ -390,7 +390,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected second element to be a hash table but it is System.String*"
+                    -ExpectedMessage "*Expected second element to be a hashtable but it is System.String*"
         }
 
         It 'returns $True if CategoryInfoItem is two-element array with types @([string], [hashtable])' {
@@ -437,7 +437,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected value to be a hash table but it is System.String*" 
+                    -ExpectedMessage "*Expected value to be a hashtable but it is System.String*" 
         }
 
         It 'throws ArgumentException if CategoryInfoItem is hashtable where second value is not a hashtable' {
@@ -448,7 +448,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected value to be a hash table but it is System.String*" 
+                    -ExpectedMessage "*Expected value to be a hashtable but it is System.String*" 
         }
 
         It 'returns $True if CategoryInfoItem is hashtable with single item of types [string]=[hashtable]' {

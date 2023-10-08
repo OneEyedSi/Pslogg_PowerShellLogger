@@ -855,21 +855,38 @@ function Reset-LogConfiguration()
 
 <#
 .SYNOPSIS
-Gets the folder name of the top-most script or function calling into this module.
+Gets the directory name of the top-most script or module calling into this module.
 
 .DESCRIPTION
-Returns the folder name from the first non-console stack frame at the top of the call stack.  If 
-that stack frame represents this module the function will return the current location set in the 
-console.
+This function attempts to get the directory name of the top-most script or module calling into 
+this module.  It ignores any stack frames where the directory is the same as this module: Those 
+are assumed to represent functions in this module.  It will continue walking the call stack 
+until it reaches the end, or it reaches a stack frame without a script name.  
 
-If the call stack cannot be read then the function returns $Null.
+A stack frame without a script name represents the PowerShell console session, presumably the 
+session of the user invoking the script that is calling into the Pslogg module.  If a stack 
+frame without a script name is reached the directory from the previous stack frame, which does 
+have a script name, is returned.
 
+If the only directory found is the same as the directory of this Pslogg module it is assumed the 
+user is invoking a Pslogg module function directly from the PowerShell console, rather than from 
+a script or module.  In that case the function will return the current working directory of the 
+PowerShell console.
+
+If the call stack cannot be read the function returns $Null.
 
 .NOTES
 This function is NOT intended to be exported from this module.
 
 This is an expensive function.  However, it will only be called while setting the logging 
 configuration which shouldn't happen often.
+
+WARNING: This function may return unexpected results if a user is calling a script indirectly.  
+For example, if a user is running a Pester test on a module that uses the Pslogg module, this 
+function will return the directory of the Pester module, not the directory of the test script it 
+is running, or the directory of the module under test.  That is because the user is invoking 
+Pester, not running the test script or the module under test directly.  This function will see 
+the Pester module as the top-most script or module being executed.
 #>
 function Private_GetCallerDirectory()
 {
@@ -877,30 +894,60 @@ function Private_GetCallerDirectory()
 	if ($callStack -eq $null -or $callStack.Count -eq 0)
 	{
 		return $Null
-	}
+	}    
     
+    # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
+    # further away from this function.
     $thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
+	$thisModuleDirectory = Split-Path -Path $thisModuleFileName -Parent
     
-    $i = $callStack.Count - 1
+    $frameCount = $callStack.Count
+    # Start from the 2nd stack frame as we've already read the details of the 1st stack frame.
+    $i = 1
 	$stackFrameFileName = $Null
+	$stackFrameDirectory = $Null
+
+    # We want to walk up the call stack out of the module directory and stop at the top-most 
+    # script, the script that presumably the user is calling.  
+    
+    # We don't want to stop at the first stack frame outside the module directory because that may 
+    # be a low-level script or function the user knows nothing about.  
+
+    # We don't want to automatically keep going to the top-most frame in the call stack because, 
+    # if the script is being called manually, the top-most frame will represent the PowerShell 
+    # console the user is running the script from.  We want to save any log file along side the 
+    # script being run, if we can.
+
+    # We can tell stack frames representing scripts from those representing the PowerShell console 
+    # via the ScriptName.  A  stack frame representing a call from a script file (whether from the 
+    # root of the file or from a function) will have a non-null ScriptName.  A stack frame 
+    # representing a call from the console will have ScriptName equal to $Null.  
 	do
 	{
 		$stackFrame = $callStack[$i]
-		$stackFrameFileName = $stackFrame.ScriptName
-        $i--
-	} while ($stackFrameFileName -eq $Null -and $stackFrameFileName -ne $thisModuleFileName -and $i -ge 0)
-	
-    $stackFrameDirectory = (Get-Location).Path
-    # A stack frame representing a call from the console will have ScriptName equal to $Null.  A  
-    # stack frame representing a call from a script file (whether from the root of the file or 
-    # from a function) will have a non-null ScriptName.
-    if ($stackFrameFileName -ne $Null -and $stackFrameFileName -ne $thisModuleFileName)
-    {
-        $stackFrameDirectory = Split-Path -Path $stackFrameFileName -Parent
-    }
+		$stackFrameFileName = $stackFrame.ScriptName		
 
-	return $stackFrameDirectory
+		if ($stackFrameFileName)
+		{
+			$stackFrameDirectory = Split-Path -Path $stackFrameFileName -Parent
+		}
+
+        $i++
+        # ASSUMPTION: All frames will have a ScriptName until we get to the PowerShell console, at 
+        # the top of the call stack.
+	} while ($stackFrameFileName -and $i -lt $frameCount)
+	
+    $callerDirectory = $stackFrameDirectory
+	if (-not $callerDirectory -or $callerDirectory -eq $thisModuleDirectory)
+	{
+        # No calling script outside of this module directory.  So assume this module is getting 
+        # called directly from the PowerShell console, not from a script.  In that case set the 
+        # caller directory to the current working directory.
+		$callerDirectory = (Get-Location).Path
+	}
+
+	return $callerDirectory
 }
 
 <#
