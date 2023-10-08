@@ -7,45 +7,36 @@
 Gets a copy of the log configuration settings.
 
 .DESCRIPTION
-Gets a copy of the log configuration settings.  
-
-The hash table returned by Get-LogConfiguration is a copy of the Pslogg configuration, NOT a
-reference to the live configuration.  This means any changes to the hash table retrieved by 
-Get-LogConfiguration will NOT be reflected in Pslogg's configuration.
+Gets a copy of the log configuration settings, not a reference to the live configuration.
 
 .OUTPUTS
-A hash table with the following keys:
+A hashtable with the following keys:
 
-    LogLevel: A string that specifies the Log Level of the logger.  It determines whether a 
-        message will be logged or not.  
+    LogLevel: The session logging level.  It determines whether a message will be logged or not.  
 
-        Possible values, in order from lowest to highest, are:
-            OFF
-            ERROR
-            WARNING
-            INFORMATION
-            DEBUG
+        Possible values, in order from highest to lowest, are:
             VERBOSE
+            DEBUG
+            INFORMATION
+            WARNING
+            ERROR
+            OFF
 
-        Only messages with a Message Level the same as or lower than the LogLevel will be logged.
+        Only messages with a MessageLevel the same as or lower than the LogLevel will be logged.
 
         For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
         INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
         VERBOSE will not be logged, as those levels are higher than INFORMATION;
 
-    LogFile: A hash table with the configuration details of the log file that log messages will be 
-        written to, in addition to the PowerShell host or PowerShell streams.  If you don't want 
-        to write to a log file either set the LogFile value to $Null, or set LogFile.Name to 
-        $Null.
+    LogFile: Properties of the log file that messages can optionally be written to.
         
-        The hash table has the following keys:
+        The hashtable has the following keys:
 
             Name: The name of the log file.  If LogFile.Name is $Null, empty or blank then 
-                messages will be written to the PowerShell host or PowerShell streams but not 
-                written to a log file.  
+                messages will not be written to a log file.  
                 
                 If LogFile.Name is specified without a path, or with a relative path, it will be 
-                relative to the directory of the calling script, not this module.  
+                relative to the directory of the calling script, not the Pslogg module.  
                 
                 The LogFile.Name is the raw file name before the path is resolved, and before 
                 any date is appended.
@@ -57,14 +48,15 @@ A hash table with the following keys:
                 'Results_20171129.log'.  The default value is $True;
 
             Overwrite: If $True any existing log file with the same name as LogFile.Name, 
-                including the date if LogFile.IncludeDateInFileName is set, will be overwritten 
-                by the first message logged in a given session.  Subsequent messages written in 
-                the same session will be appended to the end of the log file.  
+                including the date if LogFile.IncludeDateInFileName is set, will be overwritten.   
+                The log file will only be overwritten by the first message logged in a given 
+                session.  Subsequent messages written in the same session will be appended to the 
+                end of the log file.  
         
                 If $False new log messages will be appended to the end of the existing log file.  
         
-                If no file with the same name exists it will be created, regardless of the value 
-                of Log.OverwriteLogFile.  
+                If no file exists with the same name as LogFile.Name it will be created, 
+                regardless of the value of LogFile.Overwrite.    
         
                 The default value is $True;
 
@@ -76,9 +68,11 @@ A hash table with the following keys:
                 name returned is simply the name of the file Pslogg is currently configured to 
                 write to, whatever that name may be.
 
-    WriteToHost: If $True then all log messages will be written to the host.  If $False then log 
-        messages will be written to the appropriate stream.  For example, Error messages will be 
-        written to the error stream, Warning messages will be written to the warning stream, etc. 
+    WriteToHost: If $True then log messages will be written to the PowerShell host.  
+    
+        If $False then log messages will be written to the appropriate PowerShell stream.  For 
+        example, Error messages will be written to the error stream, Warning messages will be 
+        written to the warning stream, etc. 
 
         The default value is $True;
 		
@@ -134,11 +128,11 @@ A hash table with the following keys:
 		The default MessageFormat is: 
 		'{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}';
 
-    HostTextColor: A hash table that specifies the different text colors that will be used for 
-        different log levels, for log messages written to the host.  HostTextColor only applies 
-        if WriteToHost is $True.  
+    HostTextColor: A hashtable that specifies the different text colors that will be used for 
+        different log levels, for log messages written to the PowerShell console.  HostTextColor 
+        only applies if WriteToHost is $True.  
         
-        The hash table has the following keys:
+        The hashtable has the following keys:
 
             Error: The text color for messages of log level Error.  The default value is Red;
 
@@ -157,38 +151,27 @@ A hash table with the following keys:
         'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
         'Red', 'Magenta', 'Yellow', 'White';
 
-    CategoryInfo: A hash table that defines properties for Message Categories.  
-    
-        When writing a log message any string can be used for a Message Category.  However, to 
-        provide special functionality for messages of a given category, that category should be 
-        added to the configuration CategoryInfo hash table.
+    CategoryInfo: A hashtable that defines Categories and their properties.
         
-        The keys of the CategoryInfo hash table are the category names that will be used as 
-        Message Categories.  The CategoryInfo values are nested hash tables that set the 
-        properties of each category.  
+        The keys of the CategoryInfo hashtable are the category names and the  values are nested 
+        hashtables that set the properties of each category.  
         
-        Currently two properties are supported:
+        Two properties are supported:
 
             IsDefault: Indicates the category that will be used as the default, if no -Category 
                 is specified in Write-LogMesssage;
 
             Color: The text color for messages of the specified category, if they are written to 
-                the host. 
+                the PowerShell console. 
 .NOTES
 Get-LogConfiguration returns a copy of the Pslogg configuration, NOT a reference to the live 
-configuration.  As a result the Pslogg configuration can only be updated via Set-LogConfiguration.  
-This ensures that the Pslogg internal state is updated correctly.  
+configuration.  This means any changes to the hashtable retrieved by Get-LogConfiguration will NOT 
+be reflected in Pslogg's configuration.  The configuration can only be updated via 
+Set-LogConfiguration.  This ensures the Pslogg internal state is updated correctly. 
 
-For example, if a user were able to use Get-LogConfiguration to access the live configuration 
-and modify it to set the configuration MessageFormat string directly, the modified MessageFormat 
-would not be used when writing log messages.  That is because Set-LogConfiguration parses the 
-new MessageFormat string and updates Pslogg's internal state to indicate which fields are to be 
-included in log messages.  If the configuration MessageFormat string were updated directly it 
-would not be parsed and the list of fields to include in log messages would not be updated.
-
-Although changes to the hash table retrieved by Get-LogConfiguration will not be reflected in 
-the Pslogg configuration, the updated hash table can be written back into the Pslogg configuration 
-via Set-LogConfiguration.  
+Although changes to the hashtable retrieved by Get-LogConfiguration will not be reflected in 
+the Pslogg configuration, the updated hashtable can be written back into the Pslogg configuration 
+via Set-LogConfiguration -LogConfiguration.  
 
 .EXAMPLE
 Get the text color for messages with category Success:
@@ -283,23 +266,29 @@ function Get-LogConfiguration()
 Sets one or more of the log configuration settings.    
 
 .DESCRIPTION 
-Sets one or more of the log configuration settings. 
+Sets one or more of the log configuration settings.  Set-LogConfiguration can set the 
+configuration in one of two ways:
+
+    1) By using different parameters to update individual configuration settings;
+
+    2) By editing the configuration hashtable, then passing the edited hashtable into parameter 
+        -LogConfiguration.
 
 .PARAMETER LogConfiguration
-A hash table representing all configuration settings.  For the hash table format see the help 
-topic for Get-LogConifguration.
+A hashtable representing all configuration settings.  For the hashtable format see the help 
+topic for Get-LogConfiguration.
 
 .PARAMETER LogLevel
-A string that specifies the Log Level of the logger.  It determines whether a message will be 
-logged or not.  
+A string that specifies the logging level for the remainder of the current PowerShell session.  
+It determines whether a message will be logged or not.  
 
-Possible values, in order from lowest to highest, are:
-    OFF
-    ERROR
-    WARNING
-    INFORMATION
-    DEBUG
+Possible values, in order from highest to lowest, are:
     VERBOSE
+    DEBUG
+    INFORMATION
+    WARNING
+    ERROR
+    OFF
 
 Only messages with a Message Level the same as or lower than the LogLevel will be logged.
 
@@ -308,11 +297,14 @@ INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of 
 VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
 .PARAMETER LogFileName
-The path to the log file.  If LogFile.Name is $Null, empty or blank log then messages will 
-be written to the PowerShell host or PowerShell streams but not written to a log file.  
+The path to the log file.  
+
+If LogFile.Name is $Null, empty or blank then messages will not be written to a log file.  They 
+will still be written to either the PowerShell host or PowerShell streams, depending on the value 
+of configuration setting WriteToHost.
                 
 If LogFile.Name is specified without a path, or with a relative path, it will be relative to 
-the directory of the calling script, not this module.  The default value for LogFile.Name is 
+the directory of the calling script, not the Pslogg module.  The default value for LogFile.Name is 
 'Results.log'.
 
 .PARAMETER IncludeDateInFileName
@@ -329,7 +321,7 @@ IncludeDateInFileName and ExcludeDateFromFileName cannot both be set at the same
 
 .PARAMETER OverwriteLogFile
 A switch parameter that, if set, will overwrite any existing log file with the same name as 
-LogFile.Name, including a date if LogFile.IncludeDateInFileName is set.  The log file will only 
+LogFile.Name, including the date if LogFile.IncludeDateInFileName is set.  The log file will only 
 be overwritten by the first message logged in a given session.  Subsequent messages written in 
 the same session will be appended to the end of the log file.
 
@@ -337,26 +329,26 @@ OverwriteLogFile and AppendToLogFile cannot both be set at the same time.
 
 .PARAMETER AppendToLogFile
 A switch parameter that is the opposite of OverwriteLogFile.  If set new log messages will be 
-appended to the end of an existing log file, if it has the same name as Log.FileName, including a 
-date if IncludeDateInFileName is set.   
+appended to the end of an existing log file, if it has the same name as LogFile.Name, including a 
+date if LogFile.IncludeDateInFileName is set.   
 
 OverwriteLogFile and AppendToLogFile cannot both be set at the same time.
 
 .PARAMETER WriteToHost
 A switch parameter that, if set, will direct all output to the host, as opposed to one of the 
-streams such as Error or Warning.  If the LogFileName parameter is set the output will also be 
-written to a log file.  
+PowerShell streams such as Error or Warning.  If the LogFileName parameter is set the output will 
+also be written to a log file.  
 
 WriteToHost and WriteToStreams cannot both be set at the same time.
 
 .PARAMETER WriteToStreams
-A switch parameter that complements WriteToHost.  If set all output will be directed to streams, 
-such as Error or Warning, rather than the host.  If the LogFileName parameter is set the output 
-will also be written to a log file.   
+A switch parameter that complements WriteToHost.  If set all output will be directed to PowerShell 
+streams, such as Error or Warning, rather than the host.  If the LogFile.Name parameter is set the 
+output will also be written to a log file.   
 
 WriteToHost and WriteToStreams cannot both be set at the same time.
 
-.PARAMETER MessageFormat: 
+.PARAMETER MessageFormat
 A string that sets the format of log messages.  
 
 Text enclosed in curly braces, {...}, represents the name of a field which will be included in the 
@@ -380,12 +372,12 @@ Possible field names are:
                     format the timestamp using the short date pattern, which is "MM/dd/yyyy" in 
                     the US.  
                             
-                    While the field names in the MessageFormat string are NOT case sentive the 
+                    While the field names in the MessageFormat string are NOT case sensitive the 
                     datetime format string IS case sensitive.  This is because .NET datetime 
                     format strings are case sensitive.  For example "d" is the short date pattern 
                     while "D" is the long date pattern.  
                             
-                    The default datetime format string is "yyyy-MM-dd hh:mm:ss.fff".
+                    The default datetime format string is "yyyy-MM-dd HH:mm:ss.fff".
 
 	{CallerName} : The name of the function or script that is writing to the log.  
 
@@ -405,72 +397,66 @@ Possible field names are:
                     always be displayed in upper case.
 
 .PARAMETER CategoryInfoItem
-Sets one or more items in the CategoryInfo hash table. 
+Sets one or more items in the CategoryInfo hashtable. 
 
 CategoryInfoItem can take two different arguments:
 
-    1) A hash table, of the form:
+    1) A hashtable, of the form:
             @{
-                <key1> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
-                <key2> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
+                <category_name_1> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
+                <category_name_2> = @{ <property1>=<value1>; <property2>=<value2>; ...n }
                 ... 
             }
 
-        The items of the hash table will be added to the CategoryInfo hash table, if the keys do 
-        not already exist in the CategoryInfo hash table.  If the keys do exist in the 
-        CategoryInfo hash table their values will be replaced.         
-        
-        The keys of the items (<key1>, <key2> in the hash table above) are Message Category 
-        names.  The values of the items ( @{ <property1>=<value1>; <property2>=<value2>; ...n } 
-        in the hash table above) are hash tables that attach properties to the associated Message 
-        Categories.
+        If a category name already exists in the CategoryInfo hashtable its properties will be 
+        updated. If the category name does not exist it will be created.
 
         Currently two properties are supported for each CategoryInfoItem:
 
             IsDefault: Indicates the category that will be used as the default, if no -Category 
                 is specified in Write-LogMesssage;
 
-            Color: The text color for messages of the specified category, if they are written to 
+            Color: The text color for messages of the specified category, when they are written to 
                 the host. 
 
     2) A two-element array, of the form:
-            <key>, @{ <property1>=<value1>; <property2>=<value2>; ...n }
+            <category_name>, @{ <property1>=<value1>; <property2>=<value2>; ...n }
 
-        This sets a single CategoryInfo item.  If the key already exists the value will be 
-        replaced.  If the key does not already exist it will be created.
+        This sets a single category.  If the category name already exists its properties will be 
+        updated.  If the category name does not already exist it will be created.
 
-Only one CategoryInfo item can have the IsDefault property set.  If one of the supplied items has 
-IsDefault set then the IsDefault property will be removed from all existing items.  If multiple 
-supplied items have IsDefault set then only the last one processed will end up with IsDefault.  
-The last item processed will depend on the sort order of the CategoryInfo hash table Keys 
-collection.
+Only one category can have the IsDefault property set.  If one of the supplied categories has 
+IsDefault set then the IsDefault property will be removed from all existing categories.  If 
+multiple supplied categories have IsDefault set then only the last one processed will end up with 
+IsDefault set.  The last category processed will depend on the sort order of the CategoryInfo 
+hashtable Keys collection.
 
 .PARAMETER CategoryInfoKeyToRemove
-Removes one or more items from the CategoryInfo hash table.
+Removes one or more items from the CategoryInfo hashtable.
 
 CategoryInfoKeyToRemove can take two different arguments:
 
-    1) An array of CategoryInfo keys;
+    1) An array of category names (CategoryInfo hashtable keys);
 
-    2) A single CategoryInfo key.
+    2) A single category name.
 
 .PARAMETER HostTextColorConfiguration
-A hash table specifying the different text colors that will be used for different log levels, 
+A hashtable specifying the different text colors that will be used for different log levels, 
 for log messages written to the host.  
 
-The hash table must have the following keys:
+The hashtable must have the following keys:
 
-    Error: The text color for messages of log level Error.  The default value is 'Red';
-
-    Warning: The text color for messages of log level Warning.  The default value is 
-        'Yellow';
-
-    Information: The text color for messages of log level Information.  The default 
-        value is 'Cyan';
+    Verbose: The text color for messages of log level Verbose.  The default value is 'White';
 
     Debug: The text color for messages of log level Debug.  The default value is 'White';
 
-    Verbose: The text color for messages of log level Verbose.  The default value is 'White'.  
+    Information: The text color for messages of log level Information.  The default 
+        value is 'White';
+
+    Warning: The text color for messages of log level Warning.  The default value is 
+        'Yellow'`;
+
+    Error: The text color for messages of log level Error.  The default value is 'Red'.  
 
 Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 
 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
@@ -479,8 +465,8 @@ Possible values for text colors are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan
 These colors are only used if WriteToHost is set.  If WriteToStreams is set these colors are 
 ignored.
 
-.PARAMETER ErrorTextColor
-The text color for messages written to the host at message level Error.  
+.PARAMETER VerboseTextColor
+The text color for messages written to the host at message level Verbose.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
@@ -488,33 +474,33 @@ Acceptable values are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan',
 'DarkRed', 'DarkMagenta', 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 
 'Red', 'Magenta', 'Yellow', 'White'.
 
-.PARAMETER WarningTextColor
-The text color for messages written to the host at message level Warning.  
+.PARAMETER DebugTextColor
+The text color for messages written to the host at message level Debug.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
-Acceptable values are as per ErrorTextColor.
+Acceptable values are as per VerboseTextColor.
 
 .PARAMETER InformationTextColor
 The text color for messages written to the host at message level Information.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
-Acceptable values are as per ErrorTextColor.
+Acceptable values are as per VerboseTextColor.
 
-.PARAMETER DebugTextColor
-The text color for messages written to the host at message level Debug.  
-
-This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
-
-Acceptable values are as per ErrorTextColor.
-
-.PARAMETER VerboseTextColor
-The text color for messages written to the host at message level Verbose.  
+.PARAMETER WarningTextColor
+The text color for messages written to the host at message level Warning.  
 
 This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
 
-Acceptable values are as per ErrorTextColor.
+Acceptable values are as per VerboseTextColor.
+
+.PARAMETER ErrorTextColor
+The text color for messages written to the host at message level Error.  
+
+This is only used if WriteToHost is set.  If WriteToStreams is set this color is ignored.
+
+Acceptable values are as per VerboseTextColor.
 
 .EXAMPLE
 Use parameter -LogConfiguration to update the entire configuration at once:
@@ -573,14 +559,14 @@ Change the default Category using the tuple (two-element array) syntax:
     Set-LogConfiguration -CategoryInfoItem FileCopy, @{ IsDefault = $True }
 
 .EXAMPLE
-Add multiple CategoryInfo items using the hash table syntax:
+Add multiple CategoryInfo items using the hashtable syntax:
 
     Set-LogConfiguration -CategoryInfoItem @{ 
                                             FileCopy = @{ Color = 'Blue' } 
                                             FileAdd = @{ Color = 'Yellow' } 
                                             }
 
-If the configuration CategoryInfo hash table already includes keys 'FileCopy' and 'FileAdd' 
+If the configuration CategoryInfo hashtable already includes keys 'FileCopy' and 'FileAdd' 
 the colors of those CategoryInfo items will be updated.  If the keys do not already exist 
 they will be created.
 
@@ -686,27 +672,27 @@ function Set-LogConfiguration
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
         [ValidateNotNull()]
-        [Hashtable]$HostTextColorConfiguration, 
+        [Hashtable]$HostTextColorConfiguration,          
+        
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [ValidateScript({Private_ValidateHostColor $_})]
+        [string]$VerboseTextColor,    
+        
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [ValidateScript({Private_ValidateHostColor $_})]
+        [string]$DebugTextColor,      
+        
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [ValidateScript({Private_ValidateHostColor $_})]
+        [string]$InformationTextColor,            
+        
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [ValidateScript({Private_ValidateHostColor $_})]
+        [string]$WarningTextColor, 
 
         [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
         [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$ErrorTextColor,            
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$WarningTextColor,      
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$InformationTextColor,    
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$DebugTextColor,          
-        
-        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
-        [ValidateScript({Private_ValidateHostColor $_})]
-        [string]$VerboseTextColor
+        [string]$ErrorTextColor
     )
 
     # Will be $Null if LogFile.FullPath does not exist.
@@ -1005,19 +991,19 @@ function Private_SetLogFilePath ([string]$OldLogFilePath)
 
 <#
 .SYNOPSIS
-Returns a deep copy of a hash table.
+Returns a deep copy of a hashtable.
 
 .DESCRIPTION
-Returns a deep copy of a hash table.
+Returns a deep copy of a hashtable.
 
 .NOTES
-Assumes the hash table values are either value types or nested hash tables.  This function 
+Assumes the hashtable values are either value types or nested hashtables.  This function 
 will not deal properly with values that are reference types; it will make shallow copies of 
 them.
 
 This function is required because the Clone method will only perform a shallow copy of a 
-hash table.  This would not be a problem if all values of the hash table were value types 
-but that is not the case: HostTextColor is a nested hash table.
+hashtable.  This would not be a problem if all values of the hashtable were value types 
+but that is not the case: HostTextColor is a nested hashtable.
 
 This function is NOT intended to be exported from this module.
 #>
@@ -1042,7 +1028,7 @@ function Private_DeepCopyHashTable([Collections.Hashtable]$HashTable)
         }
         else
         {
-            # Assumes the value of the hash table element is a value type, not a reference type.
+            # Assumes the value of the hashtable element is a value type, not a reference type.
 			# Works also if the value is an array of values types (ie does a deep copy of the 
 			# array).
             $copy[$key] = $HashTable[$key]
@@ -1149,8 +1135,8 @@ Function called by ValidateScript to check if the value passed to parameter -Cat
 is valid.
 
 .DESCRIPTION
-Checks whether the parameter is either a hash table or an array of two elements, the second of 
-which is a hash table.  If the parameter meets these criteria this function returns $True.  If 
+Checks whether the parameter is either a hashtable or an array of two elements, the second of 
+which is a hashtable.  If the parameter meets these criteria this function returns $True.  If 
 the parameter doesn't meet the criteria the function throws an exception rather than returning 
 $False.  
 
@@ -1186,7 +1172,7 @@ function Private_ValidateCategoryInfoItem (
         if (-not ($value -is [hashtable]))
         {
             throw [ArgumentException]::new( `
-                "Expected second element to be a hash table but it is $($value.GetType().FullName).", 
+                "Expected second element to be a hashtable but it is $($value.GetType().FullName).", 
                 'CategoryInfoItem')
         }
 
@@ -1208,7 +1194,7 @@ function Private_ValidateCategoryInfoItem (
             if (-not ($value -is [hashtable]))
             {
                 throw [ArgumentException]::new( `
-                    "Expected value to be a hash table but it is $($value.GetType().FullName).", 
+                    "Expected value to be a hashtable but it is $($value.GetType().FullName).", 
                     'CategoryInfoItem')
             }
         }
@@ -1217,7 +1203,7 @@ function Private_ValidateCategoryInfoItem (
     }
 
     throw [ArgumentException]::new( `
-        "Expected argument to be either a hash table or an array but it is $($CategoryInfoItem.GetType().FullName).",
+        "Expected argument to be either a hashtable or an array but it is $($CategoryInfoItem.GetType().FullName).",
         'CategoryInfoItem')
 }
 
@@ -1226,8 +1212,8 @@ function Private_ValidateCategoryInfoItem (
 Sets a configuration CategoryInfo item.
 
 .DESCRIPTION
-The item to set is specified via the -Key and -Value parameters.  If the value hash table contains 
-an IsDefault key then any existing value hash table with an IsDefault key will have the key 
+The item to set is specified via the -Key and -Value parameters.  If the value hashtable contains 
+an IsDefault key then any existing value hashtable with an IsDefault key will have the key 
 removed.
 #>
 function Private_SetCategoryInfoItem (

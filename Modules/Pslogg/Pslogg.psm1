@@ -38,28 +38,28 @@ Reset-LogConfiguration.
 
 <#
 .SYNOPSIS
-Writes a message to the host or a stream and, optionally, to a log file.
+Writes a message to the PowerShell host or a PowerShell stream and, optionally, to a log file.
 
 .DESCRIPTION
-Writes a message to either the host or to PowerShell streams such as the Information stream or the 
-Verbose stream, depending on the logging configuration.  In addition the message may be written to 
-a log file, once again depending on the logging configuration.
+Writes a message to either the PowerShell host or to a PowerShell stream, such as the Information 
+stream or the Verbose stream, depending on the logging configuration.  In addition, the message may 
+be written to a log file, once again depending on the logging configuration.
 
 .NOTES
 The Pslogg logger can be configured via function Set-LogConfiguration with settings that persist 
 between messages.  For example, it can be configured to write to the PowerShell host, or to 
 PowerShell streams such as the Error stream or the Verbose stream.
 
-The most important configuration setting is the LogLevel.  This determines which messages will be 
-logged and which will not.  
+The most important configuration setting is the LogLevel, the session logging level.  This 
+determines which messages will be logged and which will not.  
 
-Possible LogLevels, in order from lowest to highest, are:
-    OFF
-    ERROR
-    WARNING
-    INFORMATION
-    DEBUG
+Possible LogLevels, in order from highest to lowest, are:
     VERBOSE
+    DEBUG
+    INFORMATION
+    WARNING
+    ERROR
+    OFF
         
 Each message to be logged has a Message Level.  This may be set explicitly when calling 
 Write-LogMessage or the default value of INFORMATION may be used.  The Message Level is compared 
@@ -72,12 +72,12 @@ VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
 When calling Write-LogMessage the Message Level can be set in two different ways:
 
-    1) Via parameter -MessageLevel:  The Message Level is specified as text, for example:
+    1) Via parameter -MessageLevel:  The Message Level is specified as text.  For example:
 
         Write-LogMessage 'Hello world' -MessageLevel 'VERBOSE'
 
     2) Via Message Level switch parameters:  There are switch parameters for each possible 
-        Message Level: -IsError, -IsWarning, -IsInformation, -IsDebug and -IsVerbose.  For 
+        Message Level: -IsVerbose, -IsDebug, -IsInformation, -IsWarning and -IsError.  For 
         example:
 
         Write-LogMessage 'Hello world' -IsVerbose
@@ -92,8 +92,8 @@ configuration.  Settings that can be overridden on a per-message basis are:
         one specified in the logger configuration by using the switch parameters -WriteToHost or 
         -WriteToStreams;
 
-    2) The host text color:  If the message is being written to the host, as opposed to 
-        PowerShell streams, its text color can be set via parameter -HostTextColor.  Any 
+    2) The host text color:  If the message is being written to the PowerShell host, as opposed to 
+        PowerShell streams, its text color can be set via parameter -HostTextColor.  Any valid 
         PowerShell console color can be used;
 
     3) The message format:  The format of the message can be set via parameter -MessageFormat.
@@ -111,7 +111,9 @@ Acceptable values are: 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed', 
 'DarkYellow', 'Gray', 'DarkGray', 'Blue', 'Green', 'Cyan', 'Red', 'Magenta', 'Yellow', 'White'.
 
 .PARAMETER MessageFormat: 
-A string that sets the format of the text that will be logged.  
+A string that sets the format of the text that will be logged.    If MessageFormat is not 
+specified explicitly when calling Write-LogMessage the MessageFormat from the logger configuration 
+will be used.
 
 Text enclosed in curly braces, {...}, represents the name of a field which will be included in 
 the logged text.  The field names are not case sensitive.  
@@ -128,7 +130,7 @@ Possible field names are:
 
 	{Timestamp}	  : The date and time the log message is recorded.  
 
-                    The Timestamp field may include an optional datetime format string, inside 
+                    The Timestamp field may include an optional datetime format string inside 
                     the curly braces, following the field name and separated from it by a 
                     colon, ':'.  For example, '{Timestamp:T}'.
                             
@@ -143,22 +145,22 @@ Possible field names are:
                             
                     The Timestamp field may be specified without any datetime format string.  For 
                     example, '{Timestamp}'.  In that case the default datetime format string,  
-                    'yyyy-MM-dd hh:mm:ss.fff', will be used;
+                    'yyyy-MM-dd HH:mm:ss.fff', will be used;
 
 	{CallerName}  : The name of the function or script that is writing to the log.  
 
-                    When determining the caller name all functions in this module will be ignored; 
-                    the caller name will be the external function or script that calls into this 
-                    module to write to the log.  
+                    When determining the caller name all functions in the Pslogg module will be 
+                    ignored; the caller name will be the external function or script that calls 
+                    the Pslogg module to write to the log.  
                             
                     If a function is writing to the log the function name will be displayed.  If 
                     the log is being written to from a script file, outside any function, the name 
                     of the script file will be displayed.  If the log is being written to manually 
-                    from the Powershell console then '[CONSOLE]' will be displayed.
+                    from the Powershell console then '[CONSOLE]' will be displayed;
 
 	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
                     calling Write-LogMessage the default Category from the logger configuration 
-                    will be used.
+                    will be used.  The Category will always be displayed in upper case;
 
 	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
                     message may be an Error message or a Debug message.  The MessageLevel will 
@@ -166,11 +168,11 @@ Possible field names are:
 
 .PARAMETER MessageLevel
 A string that specifies the Message Level of the message.  Possible values are the LogLevels:
-    ERROR
-    WARNING
-    INFORMATION
-    DEBUG
     VERBOSE
+    DEBUG
+    INFORMATION
+    WARNING
+    ERROR
 
 The Message Level is compared to the LogLevel in the logger configuration.  If the Message Level 
 is the same as or lower than the LogLevel the message will be logged.  If the Message Level is 
@@ -181,15 +183,15 @@ INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of 
 VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
 -MessageLevel cannot be specified at the same time as one of the Message Level switch parameters: 
--IsError, -IsWarning, -IsInformation, -IsDebug or -IsVerbose.  Either -MessageLevel can be 
+-IsVerbose, -IsDebug, -IsInformation, -IsWarning and -IsError.  Either -MessageLevel can be 
 specified or one or the Message Level switches can be specified but not both.
 
 In addition to determining whether the message will be logged or not, -MessageLevel has the 
 following effects:
 
     1) If the message is set to be written to a PowerShell stream it determines which stream the 
-        message will be written to: The Error stream, the Warning stream, the Information stream, 
-        the Debug stream or the Verbose stream;
+        message will be written to: The Verbose stream, the Debug stream, the Information stream, 
+	the Warning stream or the Error stream;
 
     2) If the message is set to be written to the host and the -HostTextColor parameter is not 
         specified -MessageLevel determines the ForegroundColor the message will be written in.  
@@ -201,40 +203,44 @@ following effects:
         by the -MessageLevel text.  For example, if -MessageLevel is ERROR the {MessageLevel} 
         placeholder will be replaced by the text 'ERROR'.
 
-.PARAMETER IsError
-Sets the Message Level to ERROR.  
-
--IsError is one of the Message Type switch parameters.  Only one Message Type switch may be set 
-at the same time.  The Message Type switch parameters are:
-    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
-
-.PARAMETER IsWarning
-Sets the Message Level to WARNING.
-
--IsWarning is one of the Message Type switch parameters.  Only one Message Type switch may be set 
-at the same time.  The Message Type switch parameters are:
-    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
-
-.PARAMETER IsInformation
-Sets the Message Level to INFORMATION.
-
--IsInformation is one of the Message Type switch parameters.  Only one Message Type switch may be 
-set at the same time.  The Message Type switch parameters are:
-    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
-
-.PARAMETER IsDebug
-Sets the Message Level to DEBUG.
-
--IsDebug is one of the Message Type switch parameters.  Only one Message Type switch may be set 
-at the same time.  The Message Type switch parameters are:
-    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose.
+Using the Message Level switches, for example -IsDebug, to set the Message Level is more concise 
+than using -MessageLevel and specifying the Message Level via text.  However, -MessageLevel is 
+useful for setting the  Message Level programmatically, based on the outcome of some process.
 
 .PARAMETER IsVerbose
 Sets the Message Level to VERBOSE.
 
--IsVerbose is one of the Message Type switch parameters.  Only one Message Type switch may be set 
-at the same time.  The Message Type switch parameters are:
-    -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose
+-IsVerbose is one of the Message Level switch parameters.  Only one Message Level switch may be set 
+at the same time.  The Message Level switch parameters are:
+    -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError.
+
+.PARAMETER IsDebug
+Sets the Message Level to DEBUG.
+
+-IsDebug is one of the Message Level switch parameters.  Only one Message Level switch may be set 
+at the same time.  The Message Level switch parameters are:
+    -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError.
+
+.PARAMETER IsInformation
+Sets the Message Level to INFORMATION.
+
+-IsInformation is one of the Message Level switch parameters.  Only one Message Level switch may be 
+set at the same time.  The Message Level switch parameters are:
+    -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError.
+
+.PARAMETER IsWarning
+Sets the Message Level to WARNING.
+
+-IsWarning is one of the Message Level switch parameters.  Only one Message Level switch may be set 
+at the same time.  The Message Level switch parameters are:
+    -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError.
+
+.PARAMETER IsError
+Sets the Message Level to ERROR.  
+
+-IsError is one of the Message Level switch parameters.  Only one Message Level switch may be set 
+at the same time.  The Message Level switch parameters are:
+    -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError.
 
 .PARAMETER Category
 A string that specifies the Message Category of the message.  Any string can be specified.  
@@ -250,18 +256,21 @@ configuration CategoryInfo.Success.Color.
 
 .PARAMETER WriteToHost
 A switch parameter that, if set, will write the message to the host, as opposed to one of the 
-PowerShell streams such as Error or Warning, overriding the logger configuration setting 
-WriteToHost.
+PowerShell streams such as Error or Warning.
+
+-WriteToHost overrides the logger configuration setting WriteToHost.
 
 -WriteToHost and -WriteToStreams cannot both be set at the same time.
 
 .PARAMETER WriteToStreams
 A switch parameter that complements -WriteToHost.  If set the message will be written to a 
-PowerShell stream.  This overrides the logger configuration setting WriteToHost.
+PowerShell stream.  
+
+-WriteToStreams overrides the logger configuration setting WriteToHost.
 
 Which PowerShell stream is written to is determined by the Message Level, which may be set via 
 the -MessageLevel parameter or by one of the Message Level switch parameters: 
--IsError, -IsWarning, -IsInformation, -IsDebug or -IsVerbose.
+-IsVerbose, -IsDebug, -IsInformation, -IsWarning or -IsError.
 
 -WriteToHost and -WriteToStreams cannot both be set at the same time.
 
@@ -347,15 +356,7 @@ function Write-LogMessage
 
         [Parameter(Mandatory=$False,
                     ParameterSetName='MessageLevelSwitches')]
-        [switch]$IsError, 
-
-        [Parameter(Mandatory=$False,
-                    ParameterSetName='MessageLevelSwitches')]
-        [switch]$IsWarning,
-
-        [Parameter(Mandatory=$False,
-                    ParameterSetName='MessageLevelSwitches')]
-        [switch]$IsInformation, 
+        [switch]$IsVerbose, 
 
         [Parameter(Mandatory=$False,
                     ParameterSetName='MessageLevelSwitches')]
@@ -363,7 +364,15 @@ function Write-LogMessage
 
         [Parameter(Mandatory=$False,
                     ParameterSetName='MessageLevelSwitches')]
-        [switch]$IsVerbose, 
+        [switch]$IsInformation, 
+
+        [Parameter(Mandatory=$False,
+                    ParameterSetName='MessageLevelSwitches')]
+        [switch]$IsWarning,
+
+        [Parameter(Mandatory=$False,
+                    ParameterSetName='MessageLevelSwitches')]
+        [switch]$IsError, 
 
         [Parameter(Mandatory=$False)]
         [string]$Category,
@@ -375,8 +384,8 @@ function Write-LogMessage
         [switch]$WriteToStreams
     )
 
-    Private_ValidateSwitchParameterGroup -SwitchList $IsError,$IsWarning,$IsInformation,$IsDebug,$IsVerbose `
-		-ErrorMessage 'Only one Message Level switch parameter may be set when calling the function. Message Level switch parameters: -IsError, -IsWarning, -IsInformation, -IsDebug, -IsVerbose'
+    Private_ValidateSwitchParameterGroup -SwitchList $IsVerbose,$IsDebug,$IsInformation,$IsWarning,$IsError `
+		-ErrorMessage 'Only one Message Level switch parameter may be set when calling the function. Message Level switch parameters: -IsVerbose, -IsDebug, -IsInformation, -IsWarning, -IsError'
 
     Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams `
 		-ErrorMessage 'Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams'
