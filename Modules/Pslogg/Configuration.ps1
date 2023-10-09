@@ -890,18 +890,23 @@ the Pester module as the top-most script or module being executed.
 #>
 function Private_GetCallerDirectory()
 {
-	$callStack = Get-PSCallStack
-	if ($callStack -eq $null -or $callStack.Count -eq 0)
+    $callStack = Get-PSCallStack
+	if ($null -eq $callStack -or $callStack.Count -eq 0)
 	{
 		return $Null
 	}    
-    
+
     # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
     # further away from this function.
     $thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
-	$thisModuleDirectory = Split-Path -Path $thisModuleFileName -Parent
     
+    $thisModuleDirectory = $null
+    if (-not [string]::IsNullOrWhiteSpace($thisModuleFileName))
+    {
+	    $thisModuleDirectory = Split-Path -Path $thisModuleFileName -Parent
+    }
+
     $frameCount = $callStack.Count
     # Start from the 2nd stack frame as we've already read the details of the 1st stack frame.
     $i = 1
@@ -923,7 +928,7 @@ function Private_GetCallerDirectory()
     # via the ScriptName.  A  stack frame representing a call from a script file (whether from the 
     # root of the file or from a function) will have a non-null ScriptName.  A stack frame 
     # representing a call from the console will have ScriptName equal to $Null.  
-	do
+	while (($i -eq 1 -or $stackFrameFileName) -and $i -lt $frameCount)
 	{
 		$stackFrame = $callStack[$i]
 		$stackFrameFileName = $stackFrame.ScriptName		
@@ -936,7 +941,7 @@ function Private_GetCallerDirectory()
         $i++
         # ASSUMPTION: All frames will have a ScriptName until we get to the PowerShell console, at 
         # the top of the call stack.
-	} while ($stackFrameFileName -and $i -lt $frameCount)
+	} 
 	
     $callerDirectory = $stackFrameDirectory
 	if (-not $callerDirectory -or $callerDirectory -eq $thisModuleDirectory)

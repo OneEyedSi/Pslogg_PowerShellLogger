@@ -78,6 +78,146 @@ InModuleScope Pslogg {
         } 
     }
 
+    Describe 'GetCallerDirectory' {
+        BeforeAll {
+            $des_PsloggModulePath = 'C:\Test\Modules\pslogg\2.1.2'
+            $des_ScriptDirectoryPath = 'C:\Test'
+            $des_CurrentConsoleDirectoryPath = 'C:\Test\CurrentConsoleDirectory'
+
+            Mock Get-Location { return @{ Path = $des_CurrentConsoleDirectoryPath } }
+
+            function GetStackFrames ([string[]]$ScriptPaths)
+            {
+                $stackFrames = @()
+                foreach ($scriptPath in $ScriptPaths)
+                {
+                    $fakeStackFrame = @{ ScriptName = $scriptPath }
+                    $stackFrames += $fakeStackFrame
+                }
+
+                return $stackFrames
+            }
+
+            function GetScriptPaths ([string]$DirectoryPath, [string[]]$ScriptNames)
+            {
+                $scriptPaths = @()
+                foreach ($scriptName in $ScriptNames)
+                {
+                    $scriptPath = @( Join-Path $DirectoryPath $scriptName )
+                    $scriptPaths += $scriptPath
+                }
+
+                return $scriptPaths
+            }
+
+            function GetModuleScriptNames ([string[]]$ScriptNames)
+            {
+                return GetScriptPaths -DirectoryPath $des_PsloggModulePath -ScriptNames $ScriptNames
+            }
+
+            function GetExternalScriptNames ([string[]]$ScriptNames)
+            {
+                return GetScriptPaths -DirectoryPath $des_ScriptDirectoryPath -ScriptNames $ScriptNames
+            }
+        }
+
+        Context 'Call stack is Null' {
+            BeforeAll {
+                Mock Get-PSCallStack { return $Null }
+            }
+
+            It 'returns $Null when call stack is $Null' {
+                Private_GetCallerDirectory | Should -Be $Null
+            }
+        }
+
+        Context 'Call stack has no stack frames' {
+            BeforeAll {
+                Mock Get-PSCallStack { return @() }
+            }
+
+            It 'returns $Null when call stack has no stack frames' {
+                Private_GetCallerDirectory | Should -Be $Null
+            }
+        }
+
+        Context 'Calling Pslogg from PowerShell console' {
+
+            It 'returns path to console working directory when call stack has single stack frame representing module file' {
+                $scriptNames = @( Join-Path $des_PsloggModulePath 'Pslogg.psm1' )
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+            
+            It 'returns path to console working directory when call stack has single stack frame without script name' {
+                $scriptNames = @($Null)
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+
+            It 'returns path to console working directory when call stack has two stack frames representing module files' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+
+            It 'returns path to console working directory when single non-module call stack frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += $Null
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+        }
+
+        Context 'Calling Pslogg from script' {
+
+            It 'returns path to script directory when single non-module stack frame has script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when multiple non-module stack frames have script names' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script1.ps1','Script2.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when non-module stack frame has script name and top-level frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script.ps1')
+                $scriptNames += $Null
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when multiple non-module stack frames have script names and top-level frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script1.ps1','Script2.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+        }
+    }
+
     Describe "SetLogFilePath" {    
         BeforeAll { 
             function GetFileNameFromTemplate ([string]$FileNameTemplate, [switch]$IncludeDateInFileName)
