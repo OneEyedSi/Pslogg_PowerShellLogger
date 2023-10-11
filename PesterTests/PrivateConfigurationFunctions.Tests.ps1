@@ -238,7 +238,7 @@ InModuleScope Pslogg {
             {
                 $fileNameFromConfiguration = GetFileNameFromTemplate -FileNameTemplate $NewFileNameTemplate
 
-                $script:_logConfiguration.LogFile.FullPath = $ExistingFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $ExistingFileName
                 $script:_logConfiguration.LogFile.Name = $fileNameFromConfiguration
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $IncludeDateInFileName
                 $script:_logFileOverwritten = $True
@@ -247,7 +247,7 @@ InModuleScope Pslogg {
             }
         }
 
-        It 'sets $script:_logConfiguration.LogFile.FullPath to configuration LogFile.Name' {
+        It 'sets $script:_logConfiguration.LogFile.FullPathReadOnly to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate
@@ -255,10 +255,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         }     
 
-        It 'adds date to $script:_logConfiguration.LogFile.FullPath if LogFile.IncludeDateInFileName configuration value is set' {
+        It 'adds date to $script:_logConfiguration.LogFile.FullPathReadOnly if LogFile.IncludeDateInFileName configuration value is set' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate `
@@ -267,10 +267,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         }
 
-        It 'leaves $script:_logConfiguration.LogFile.FullPath unchanged if identical to configuration LogFile.Name' {
+        It 'leaves $script:_logConfiguration.LogFile.FullPathReadOnly unchanged if identical to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\Original\old.log'
             $expectedFileName = $existingFileName
@@ -278,10 +278,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
         }
 
-        It 'leaves $script:_logConfiguration.LogFile.FullPath unchanged if existing file name includes today''s date' {
+        It 'leaves $script:_logConfiguration.LogFile.FullPathReadOnly unchanged if existing file name includes today''s date' {
             $fileNameTemplate = 'C:\Test\Test${dateText}.log'
             $existingFileName = GetFileNameFromTemplate -FileNameTemplate $fileNameTemplate `
                 -IncludeDateInFileName
@@ -290,10 +290,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
         } 
 
-        It 'updates $script:_logConfiguration.LogFile.FullPath if existing file name includes old date' {
+        It 'updates $script:_logConfiguration.LogFile.FullPathReadOnly if existing file name includes old date' {
             $fileNameTemplate = 'C:\Test\Test${dateText}.log'
             $oldDate = Get-Date -Year 2018 -Month 1 -Day 15
             $existingFileName = $ExecutionContext.InvokeCommand.ExpandString($fileNameTemplate)
@@ -303,7 +303,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         } 
 
         It 'leaves $script:_logFileOverwritten unchanged if log file path not updated' {
@@ -314,7 +314,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
             $script:_logFileOverwritten | Should -Be $True
         }
 
@@ -327,7 +327,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
             $script:_logFileOverwritten | Should -Be $True
         } 
 
@@ -340,7 +340,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
             $script:_logFileOverwritten | Should -Be $False
         }
 
@@ -354,7 +354,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
             $script:_logFileOverwritten | Should -Be $False
         }
     }

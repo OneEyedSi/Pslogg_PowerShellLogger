@@ -33,7 +33,7 @@ $_defaultLogConfiguration = @{
                                                 Name = 'Results.log'
                                                 IncludeDateInFileName = $True
                                                 Overwrite = $True
-                                                FullPath = ''
+                                                FullPathReadOnly = ''
                                             }
                                 CategoryInfo = $_defaultCategoryInfo
                             }

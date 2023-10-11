@@ -551,12 +551,12 @@ function Write-LogMessage
     }
     if ($overwriteLogFile -and (-not $script:_logFileOverwritten))
     {
-        Set-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
+        Set-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly -Value $textToLog
         $script:_logFileOverwritten = $True
     }
     else
     {
-        Add-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
+        Add-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly -Value $textToLog
     }
 }
 
