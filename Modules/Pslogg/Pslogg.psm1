@@ -400,11 +400,7 @@ function Write-LogMessage
         $messageFormatInfo = Private_GetMessageFormatInfo $MessageFormat
     }
 
-    # Getting the calling object name is an expensive operation so only perform it if needed.
-    if ($messageFormatInfo.FieldsPresent -contains 'CallerName')
-    {
-        $CallerName = Private_GetCallerName
-    }
+    $CallerName = Private_GetCallerName
 
     # Parameter sets mean either $MessageLevel is supplied or a message level switch, such as 
     # -IsError, but not both.  Of course, they're all optional so none have to be specified, in 
@@ -530,17 +526,8 @@ function Write-LogMessage
         }
     }
 
-    if (-not $script:_logConfiguration.ContainsKey('LogFile') `
-        -or -not $script:_logConfiguration.LogFile.ContainsKey('Name') `
-        -or [string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
+    if (-not (Private_ShouldWriteToFile -CallerName $CallerName))
     {
-        return
-    }
-
-    if (-not (Test-Path $script:_logConfiguration.LogFile.FullPath -IsValid))
-    {
-        # Fail silently so that every message output to the console doesn't include an error 
-        # message.
         return
     }
 
@@ -591,11 +578,13 @@ This function is NOT intended to be exported from this module.
 function Private_GetCallerName()
 {
 	$callStack = Get-PSCallStack
-	if ($callStack -eq $null -or $callStack.Count -eq 0)
+	if ($null -eq $callStack -or $callStack.Count -eq 0)
 	{
-		return '[UNKNOWN CALLER]'
+		return $script:_constCallerUnknown
 	}
 	
+    # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
+    # further away from this function.
 	$thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
 	$stackFrameFileName = $thisModuleFileName
@@ -603,7 +592,7 @@ function Private_GetCallerName()
     # be at least two stack frames in the call stack as this function will only be called from 
     # another function in this module, so it's safe to skip the first stack frame.
 	$i = 1
-	$stackFrameFunctionName = '----'
+	$stackFrameFunctionName = $script:_constCallerFunctionUnknown
 	while ($stackFrameFileName -eq $thisModuleFileName -and $i -lt $callStack.Count)
 	{
 		$stackFrame = $callStack[$i]
@@ -612,9 +601,9 @@ function Private_GetCallerName()
 		$i++
 	}
 	
-	if ($stackFrameFileName -eq $null)
+	if ($null -eq $stackFrameFileName)
 	{
-		return '[CONSOLE]'
+		return  $script:_constCallerConsole
 	}
 	if ($stackFrameFunctionName -eq '<ScriptBlock>')
 	{
@@ -623,6 +612,52 @@ function Private_GetCallerName()
 	}
 	
 	return $stackFrameFunctionName
+}
+
+<#
+.SYNOPSIS
+Indicates whether a log message should be written to a log file.
+
+.DESCRIPTION
+Indicates whether a log message should be written to a log file.  This depends on whether the 
+message is being written from a script or from the PowerShell console, whether the 
+LogFile.WriteFromScript or LogFile.WriteFromHost configuration flags are set, and whether the 
+LogFile.Name configuration value is set.
+
+.NOTES
+This function is NOT intended to be exported from this module.
+
+#>
+function Private_ShouldWriteToFile([string]$CallerName)
+{
+    
+    # [string]::IsNullOrWhiteSpace returns True if key LogFile.Name doesn't exist.
+    if ($Null -eq $script:_logConfiguration `
+        -or -not $script:_logConfiguration.ContainsKey('LogFile') `
+        -or [string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
+    {
+        return $false
+    }
+
+    # Assume that if the caller is unknown, this function is being called directly from the 
+    # PowerShell host rather than from a script.
+    $calledFromHost = ($CallerName -eq $script:_constCallerConsole -or 
+                        $CallerName -eq $script:_constCallerUnknown -or 
+                        $CallerName -eq $script:_constCallerFunctionUnknown)
+
+    # Called from script but LogFile.WriteFromScript is $false.
+    if (-not $calledFromHost -and -not $script:_logConfiguration.LogFile.WriteFromScript)
+    {
+        return $false
+    }
+
+    # Called from host but LogFile.WriteFromHost is $false.
+    if ($calledFromHost -and -not $script:_logConfiguration.LogFile.WriteFromHost)
+    {
+        return $false
+    }
+
+    return (Test-Path $script:_logConfiguration.LogFile.FullPathReadOnly -IsValid)
 }
 
 #endregion

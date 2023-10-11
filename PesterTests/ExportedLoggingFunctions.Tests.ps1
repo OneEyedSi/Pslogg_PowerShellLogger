@@ -660,6 +660,64 @@ InModuleScope Pslogg {
                 AssertFileWriterNotCalled
             }
 
+            It 'does not attempt to write to a log file from PowerShell host when configuration LogFile.WriteFromHost is $False' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+                $callerName = $script:_constCallerConsole
+                # Requires .GetNewClosure() if using a variable within the script block, due to scoping rules.  See Stackoverflow 
+                # "Access External Variable from with-in Mock Script Block (Pester)", https://stackoverflow.com/a/51119000/216440
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterNotCalled
+            }
+
+            It 'does write to a log file from PowerShell host when configuration LogFile.Name is valid path and LogFile.WriteFromHost is $True' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = $script:_constCallerConsole
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
+            It 'does not attempt to write to a log file from script when configuration LogFile.WriteFromScript is $False' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterNotCalled
+            }
+
+            It 'does write to a log file from script when configuration LogFile.Name is valid path and LogFile.WriteFromScript is $True' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
             It 'does not add date to log file name when LogFile.IncludeDateInFileName cleared' {
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
                 Private_SetLogFilePath

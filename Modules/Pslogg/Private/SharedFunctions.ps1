@@ -1,6 +1,7 @@
 # Private functions shared by Configuration and Logging scripts.
 
 . $PSScriptRoot\ModuleState.ps1
+. $PSScriptRoot\Constants.ps1
 
 <#
 .SYNOPSIS
