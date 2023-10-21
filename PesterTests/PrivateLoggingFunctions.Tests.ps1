@@ -186,6 +186,33 @@ InModuleScope Pslogg {
             }
         }
 
+        Context 'WriteToFileOverride parameter' {
+
+            It 'returns $False when called from PowerShell console and WriteToFileOverride is not specified' {
+                Private_ShouldWriteToFile -CallerName $script:_constCallerConsole | Should -BeFalse
+            }
+
+            It 'returns $True when called from script and WriteToFileOverride is not specified' {
+                Private_ShouldWriteToFile -CallerName 'Somescript.ps1' | Should -BeTrue
+            }
+
+            It 'returns $True when called from PowerShell console and WriteToFileOverride is $True' {
+                Private_ShouldWriteToFile -CallerName $script:_constCallerConsole -WriteToFileOverride $True | Should -BeTrue
+            }
+
+            It 'returns $False when called from PowerShell console and WriteToFileOverride is $False' {
+                Private_ShouldWriteToFile -CallerName $script:_constCallerConsole -WriteToFileOverride $False | Should -BeFalse
+            }
+
+            It 'returns $True when called from script and WriteToFileOverride is $True' {
+                Private_ShouldWriteToFile -CallerName 'Somescript.ps1' -WriteToFileOverride $True | Should -BeTrue
+            }
+
+            It 'returns $False when called from script and WriteToFileOverride is $False' {
+                Private_ShouldWriteToFile -CallerName 'Somescript.ps1' -WriteToFileOverride $False | Should -BeFalse
+            }
+        }
+
         Context 'Called from <CallerDescription>' -ForEach @(
             @{ CallerDescription = 'PowerShell console'; CallSource = $script:_constCallerConsole }
             @{ CallerDescription = 'Unknown caller'; CallSource = $script:_constCallerUnknown }

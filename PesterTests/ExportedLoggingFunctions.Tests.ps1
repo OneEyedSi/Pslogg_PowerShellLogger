@@ -690,6 +690,21 @@ InModuleScope Pslogg {
                 AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
             }
 
+            It 'does write to a log file from PowerShell host when configuration LogFile.Name is valid path, LogFile.WriteFromHost is $False but -WriteToFile is set' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = $script:_constCallerConsole
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost -WriteToFile
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
             It 'does not attempt to write to a log file from script when configuration LogFile.WriteFromScript is $False' {
                 $logFileName = 'C:\Test\Test.log'
                 $script:_logConfiguration.LogFile.Name = $logFileName
@@ -716,6 +731,21 @@ InModuleScope Pslogg {
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
                 AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
+            It 'does not attempt to write to a log file from script when LogFile.WriteFromScript is $True but -DoNotWriteToFile is set' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost -DoNotWriteToFile
+
+                AssertFileWriterNotCalled
             }
 
             It 'does not add date to log file name when LogFile.IncludeDateInFileName cleared' {
