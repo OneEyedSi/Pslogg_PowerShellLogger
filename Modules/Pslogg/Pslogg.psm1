@@ -274,8 +274,27 @@ the -MessageLevel parameter or by one of the Message Level switch parameters:
 
 -WriteToHost and -WriteToStreams cannot both be set at the same time.
 
+.PARAMETER WriteToFile
+A switch parameter that, if set, will write the message to a log file.  The log file written to 
+depends on the LogFile configuration settings.
+
+-WriteToFile overrides the logger configuration settings LogFile.WriteFromScript or  
+LogFile.WriteFromHost, depending on whether Write-LogMessage is called from a script or module, or 
+from the PowerShell host.
+
+-WriteToFile and -DoNotWriteToFile cannot both be set at the same time.
+
+.PARAMETER DoNotWriteToFile
+A switch parameter that, if set, will prevent the message being written to a log file.  
+
+-DoNotWriteToFile overrides the logger configuration settings LogFile.WriteFromScript or  
+LogFile.WriteFromHost, depending on whether Write-LogMessage is called from a script or module, or 
+from the PowerShell host.
+
+-WriteToFile and -DoNotWriteToFile cannot both be set at the same time.
+
 .EXAMPLE
-Write error message to the log:
+Write error message:
 
     try
     {
@@ -287,19 +306,19 @@ Write error message to the log:
     }
 
 .EXAMPLE
-Write debug message to the log:
+Write debug message:
 
     Write-LogMessage "Updating user settings for $userName..." -IsDebug
 
 The -Message parameter is optional.
 
 .EXAMPLE
-Write to the log, specifying the MessageLevel rather than using a Message Level switch:
+Write, specifying the MessageLevel rather than using a Message Level switch:
 
     Write-LogMessage "Updating user settings for $userName..." -MessageLevel 'DEBUG'
 
 .EXAMPLE
-Write message to the log with a certain category:
+Write message with a certain category:
 
     Write-LogMessage 'File copy completed successfully.' -Category 'Success' -IsInformation
 
@@ -314,6 +333,14 @@ The MessageLevel wasn't specified so it will default to INFORMATION.
 Write message to the Debug PowerShell stream, rather than to the host:
 
     Write-LogMessage 'Updating user settings...' -WriteToStreams -IsDebug
+
+.EXAMPLE
+Write message to both the PowerShell host and a log file (with the log file name specified via 
+the LogFile configuration):
+
+    Write-LogMessage 'Updating user settings...' -WriteToHost -WriteToFile
+
+The MessageLevel wasn't specified so it will default to INFORMATION.
 
 .EXAMPLE
 Write message with a custom message format which only applies to this one message:
@@ -381,7 +408,13 @@ function Write-LogMessage
         [switch]$WriteToHost,      
 
         [Parameter(Mandatory=$False)]
-        [switch]$WriteToStreams
+        [switch]$WriteToStreams,      
+
+        [Parameter(Mandatory=$False)]
+        [switch]$WriteToFile,      
+
+        [Parameter(Mandatory=$False)]
+        [switch]$DoNotWriteToFile
     )
 
     Private_ValidateSwitchParameterGroup -SwitchList $IsVerbose,$IsDebug,$IsInformation,$IsWarning,$IsError `
@@ -389,6 +422,9 @@ function Write-LogMessage
 
     Private_ValidateSwitchParameterGroup -SwitchList $WriteToHost,$WriteToStreams `
 		-ErrorMessage 'Only one Destination switch parameter may be set when calling the function. Destination switch parameters: -WriteToHost, -WriteToStreams'
+        
+    Private_ValidateSwitchParameterGroup -SwitchList $WriteToFile,$DoNotWriteToFile `
+    -ErrorMessage 'Only one Enable File switch parameter may be set when calling the function. Destination switch parameters: -WriteToFile, -DoNotWriteToFile'
 	
     $Timestamp = Get-Date
     $CallerName = ''
@@ -400,11 +436,7 @@ function Write-LogMessage
         $messageFormatInfo = Private_GetMessageFormatInfo $MessageFormat
     }
 
-    # Getting the calling object name is an expensive operation so only perform it if needed.
-    if ($messageFormatInfo.FieldsPresent -contains 'CallerName')
-    {
-        $CallerName = Private_GetCallerName
-    }
+    $CallerName = Private_GetCallerName
 
     # Parameter sets mean either $MessageLevel is supplied or a message level switch, such as 
     # -IsError, but not both.  Of course, they're all optional so none have to be specified, in 
@@ -530,17 +562,18 @@ function Write-LogMessage
         }
     }
 
-    if (-not $script:_logConfiguration.ContainsKey('LogFile') `
-        -or -not $script:_logConfiguration.LogFile.ContainsKey('Name') `
-        -or [string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
+    $writeToFileOverride = $Null
+    if ($WriteToFile)
     {
-        return
+        $writeToFileOverride = $True
+    }
+    elseif ($DoNotWriteToFile)
+    {
+        $writeToFileOverride = $False
     }
 
-    if (-not (Test-Path $script:_logConfiguration.LogFile.FullPath -IsValid))
+    if (-not (Private_ShouldWriteToFile -CallerName $CallerName -WriteToFileOverride $writeToFileOverride))
     {
-        # Fail silently so that every message output to the console doesn't include an error 
-        # message.
         return
     }
 
@@ -551,12 +584,12 @@ function Write-LogMessage
     }
     if ($overwriteLogFile -and (-not $script:_logFileOverwritten))
     {
-        Set-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
+        Set-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly -Value $textToLog
         $script:_logFileOverwritten = $True
     }
     else
     {
-        Add-Content -Path $script:_logConfiguration.LogFile.FullPath -Value $textToLog
+        Add-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly -Value $textToLog
     }
 }
 
@@ -591,11 +624,13 @@ This function is NOT intended to be exported from this module.
 function Private_GetCallerName()
 {
 	$callStack = Get-PSCallStack
-	if ($callStack -eq $null -or $callStack.Count -eq 0)
+	if ($null -eq $callStack -or $callStack.Count -eq 0)
 	{
-		return '[UNKNOWN CALLER]'
+		return $script:_constCallerUnknown
 	}
 	
+    # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
+    # further away from this function.
 	$thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
 	$stackFrameFileName = $thisModuleFileName
@@ -603,7 +638,7 @@ function Private_GetCallerName()
     # be at least two stack frames in the call stack as this function will only be called from 
     # another function in this module, so it's safe to skip the first stack frame.
 	$i = 1
-	$stackFrameFunctionName = '----'
+	$stackFrameFunctionName = $script:_constCallerFunctionUnknown
 	while ($stackFrameFileName -eq $thisModuleFileName -and $i -lt $callStack.Count)
 	{
 		$stackFrame = $callStack[$i]
@@ -612,9 +647,9 @@ function Private_GetCallerName()
 		$i++
 	}
 	
-	if ($stackFrameFileName -eq $null)
+	if ($null -eq $stackFrameFileName)
 	{
-		return '[CONSOLE]'
+		return  $script:_constCallerConsole
 	}
 	if ($stackFrameFunctionName -eq '<ScriptBlock>')
 	{
@@ -623,6 +658,56 @@ function Private_GetCallerName()
 	}
 	
 	return $stackFrameFunctionName
+}
+
+<#
+.SYNOPSIS
+Indicates whether a log message should be written to a log file.
+
+.DESCRIPTION
+Indicates whether a log message should be written to a log file.  This depends on whether the 
+message is being written from a script or from the PowerShell console, whether the 
+LogFile.WriteFromScript or LogFile.WriteFromHost configuration flags are set, and whether the 
+LogFile.Name configuration value is set.
+
+.NOTES
+This function is NOT intended to be exported from this module.
+
+#>
+function Private_ShouldWriteToFile([string]$CallerName, $WriteToFileOverride)
+{
+    # [string]::IsNullOrWhiteSpace returns True if key LogFile.Name doesn't exist.
+    if ($Null -eq $script:_logConfiguration `
+        -or -not $script:_logConfiguration.ContainsKey('LogFile') `
+        -or [string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
+    {
+        return $false
+    }
+
+    if (-not ($Null -eq $WriteToFileOverride))
+    {
+        return $WriteToFileOverride
+    }
+
+    # Assume that if the caller is unknown, this function is being called directly from the 
+    # PowerShell host rather than from a script.
+    $calledFromHost = ($CallerName -eq $script:_constCallerConsole -or 
+                        $CallerName -eq $script:_constCallerUnknown -or 
+                        $CallerName -eq $script:_constCallerFunctionUnknown)
+
+    # Called from script but LogFile.WriteFromScript is $false.
+    if (-not $calledFromHost -and -not $script:_logConfiguration.LogFile.WriteFromScript)
+    {
+        return $false
+    }
+
+    # Called from host but LogFile.WriteFromHost is $false.
+    if ($calledFromHost -and -not $script:_logConfiguration.LogFile.WriteFromHost)
+    {
+        return $false
+    }
+
+    return (Test-Path $script:_logConfiguration.LogFile.FullPathReadOnly -IsValid)
 }
 
 #endregion

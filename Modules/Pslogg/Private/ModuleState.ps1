@@ -30,10 +30,12 @@ $_defaultLogConfiguration = @{
                                 WriteToHost = $True
                                 HostTextColor = $_defaultHostTextColor
                                 LogFile = @{
+                                                WriteFromScript = $True
+                                                WriteFromHost = $False
                                                 Name = 'Results.log'
                                                 IncludeDateInFileName = $True
                                                 Overwrite = $True
-                                                FullPath = ''
+                                                FullPathReadOnly = ''
                                             }
                                 CategoryInfo = $_defaultCategoryInfo
                             }

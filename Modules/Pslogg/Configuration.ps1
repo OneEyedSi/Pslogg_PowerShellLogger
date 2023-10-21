@@ -32,6 +32,12 @@ A hashtable with the following keys:
         
         The hashtable has the following keys:
 
+            WriteFromScript: If $True enables logging to a file from a script or module.  The 
+                default value is $True;
+
+            WriteFromHost: If $True enables logging to a file from the PowerShell host.  The 
+                default value is $False;
+
             Name: The name of the log file.  If LogFile.Name is $Null, empty or blank then 
                 messages will not be written to a log file.  
                 
@@ -60,9 +66,9 @@ A hashtable with the following keys:
         
                 The default value is $True;
 
-            FullPath: The fully resolved path to the current log file.  This will include the date 
-                if LogFile.IncludeDateInFileName is set.  It will also be the full absolute path 
-                to the log file, rather than a relative path.  
+            FullPathReadOnly: The fully resolved path to the current log file.  This will include 
+                the date if LogFile.IncludeDateInFileName is set.  It will also be the full 
+                absolute path to the log file, rather than a relative path.  
                 
                 Any date included in the file name may not necessarily be today's date; the file 
                 name returned is simply the name of the file Pslogg is currently configured to 
@@ -218,11 +224,11 @@ include dates in log file names.
 Get the full path of the file that messages will be logged to:
 
     PS C:\Users\Me> $config = Get-LogConfiguration
-    PS C:\Users\Me> $config.LogFile.FullPath 
+    PS C:\Users\Me> $config.LogFile.FullPathReadOnly 
 
     C:\Users\Me\Documents\PowerShell\MyTest\Results_20201027.log
 
-In contrast to $config.LogFile.Name, $config.LogFile.FullPath is the absolute path to the log 
+In contrast to $config.LogFile.Name, $config.LogFile.FullPathReadOnly is the absolute path to the log 
 file.  It will include the date, if Pslogg is configured to include dates in log file names.  
 
 .EXAMPLE
@@ -295,6 +301,26 @@ Only messages with a Message Level the same as or lower than the LogLevel will b
 For example, if the LogLevel is INFORMATION then only messages with a Message Level of 
 INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
 VERBOSE will not be logged, as those levels are higher than INFORMATION.
+
+.PARAMETER EnableFileLoggingFromScript
+A switch parameter that, if set, enables logging to a file from a script or module.
+
+-EnableFileLoggingFromScript and -DisableFileLoggingFromScript cannot both be set at the same time.
+
+.PARAMETER DisableFileLoggingFromScript
+A switch parameter that, if set, disables logging to a file from a script or module.
+
+-EnableFileLoggingFromScript and -DisableFileLoggingFromScript cannot both be set at the same time.
+
+.PARAMETER EnableFileLoggingFromHost
+A switch parameter that, if set, enables logging to a file from the PowerShell host.
+
+-EnableFileLoggingFromHost and -DisableFileLoggingFromHost cannot both be set at the same time.
+
+.PARAMETER DisableFileLoggingFromHost
+A switch parameter that, if set, disables logging to a file from the PowerShell host.
+
+-EnableFileLoggingFromHost and -DisableFileLoggingFromHost cannot both be set at the same time.
 
 .PARAMETER LogFileName
 The path to the log file.  
@@ -519,6 +545,8 @@ Use parameter -LogConfiguration to update the entire configuration at once:
 							WriteToHost = $True
 							HostTextColor = $hostTextColor
 							LogFile = @{
+                                            WriteFromScript = $False
+                                            WriteFromHost = $True
 											Name = 'Debug.log'
 											IncludeDateInFileName = $False
 											Overwrite = $False
@@ -540,7 +568,8 @@ Use Get-LogConfiguration and Set-LogConfiguration to update the configuration:
 .EXAMPLE
 Set the details of the log file using individual parameters:
 
-    Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendToLogFile
+    Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName `
+        -AppendToLogFile -EnableFileLoggingFromHost
 
 .EXAMPLE
 Set the LogLevel and MessageFormat using individual parameters:
@@ -632,6 +661,22 @@ function Set-LogConfiguration
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
         [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$EnableFileLoggingFromScript,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$DisableFileLoggingFromScript,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$EnableFileLoggingFromHost,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$DisableFileLoggingFromHost,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
         [string]$LogFileName,
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
@@ -695,8 +740,8 @@ function Set-LogConfiguration
         [string]$ErrorTextColor
     )
 
-    # Will be $Null if LogFile.FullPath does not exist.
-    $oldLogFilePath = $script:_logConfiguration.LogFile.FullPath
+    # Will be $Null if LogFile.FullPathReadOnly does not exist.
+    $oldLogFilePath = $script:_logConfiguration.LogFile.FullPathReadOnly
 
     if ($LogConfiguration -ne $Null)
     {
@@ -707,6 +752,12 @@ function Set-LogConfiguration
     }
 
     # Ensure that mutually exclusive pairs of switch parameters are not both set:
+
+    Private_ValidateSwitchParameterGroup -SwitchList $EnableFileLoggingFromScript,$DisableFileLoggingFromScript `
+    -ErrorMessage "Only one FileWriteFromScript switch parameter may be set when calling the function. FileWriteFromScript switch parameters: -EnableFileLoggingFromScript, -DisableFileLoggingFromScript"
+
+    Private_ValidateSwitchParameterGroup -SwitchList $EnableFileLoggingFromHost,$DisableFileLoggingFromHost `
+    -ErrorMessage "Only one FileWriteFromHost switch parameter may be set when calling the function. FileWriteFromHost switch parameters: -EnableFileLoggingFromHost, -DisableFileLoggingFromHost"
 
     Private_ValidateSwitchParameterGroup -SwitchList $IncludeDateInFileName,$ExcludeDateFromFileName `
 		-ErrorMessage "Only one FileName switch parameter may be set when calling the function. FileName switch parameters: -IncludeDateInFileName, -ExcludeDateFromFileName"
@@ -720,6 +771,26 @@ function Set-LogConfiguration
     if (![string]::IsNullOrWhiteSpace($LogLevel))
     {
         $script:_logConfiguration.LogLevel = $LogLevel
+    }
+
+    if ($EnableFileLoggingFromScript.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromScript = $True
+    }
+
+    if ($DisableFileLoggingFromScript.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromScript = $False
+    }
+
+    if ($EnableFileLoggingFromHost.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromHost = $True
+    }
+
+    if ($DisableFileLoggingFromHost.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromHost = $False
     }
 
     if (![string]::IsNullOrWhiteSpace($LogFileName))
@@ -855,52 +926,104 @@ function Reset-LogConfiguration()
 
 <#
 .SYNOPSIS
-Gets the folder name of the top-most script or function calling into this module.
+Gets the directory name of the top-most script or module calling into this module.
 
 .DESCRIPTION
-Returns the folder name from the first non-console stack frame at the top of the call stack.  If 
-that stack frame represents this module the function will return the current location set in the 
-console.
+This function attempts to get the directory name of the top-most script or module calling into 
+this module.  It ignores any stack frames where the directory is the same as this module: Those 
+are assumed to represent functions in this module.  It will continue walking the call stack 
+until it reaches the end, or it reaches a stack frame without a script name.  
 
-If the call stack cannot be read then the function returns $Null.
+A stack frame without a script name represents the PowerShell console session, presumably the 
+session of the user invoking the script that is calling into the Pslogg module.  If a stack 
+frame without a script name is reached the directory from the previous stack frame, which does 
+have a script name, is returned.
 
+If the only directory found is the same as the directory of this Pslogg module it is assumed the 
+user is invoking a Pslogg module function directly from the PowerShell console, rather than from 
+a script or module.  In that case the function will return the current working directory of the 
+PowerShell console.
+
+If the call stack cannot be read the function returns $Null.
 
 .NOTES
 This function is NOT intended to be exported from this module.
 
 This is an expensive function.  However, it will only be called while setting the logging 
 configuration which shouldn't happen often.
+
+WARNING: This function may return unexpected results if a user is calling a script indirectly.  
+For example, if a user is running a Pester test on a module that uses the Pslogg module, this 
+function will return the directory of the Pester module, not the directory of the test script it 
+is running, or the directory of the module under test.  That is because the user is invoking 
+Pester, not running the test script or the module under test directly.  This function will see 
+the Pester module as the top-most script or module being executed.
 #>
 function Private_GetCallerDirectory()
 {
-	$callStack = Get-PSCallStack
-	if ($callStack -eq $null -or $callStack.Count -eq 0)
+    $callStack = Get-PSCallStack
+	if ($null -eq $callStack -or $callStack.Count -eq 0)
 	{
 		return $Null
-	}
-    
+	}    
+
+    # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
+    # further away from this function.
     $thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
     
-    $i = $callStack.Count - 1
-	$stackFrameFileName = $Null
-	do
-	{
-		$stackFrame = $callStack[$i]
-		$stackFrameFileName = $stackFrame.ScriptName
-        $i--
-	} while ($stackFrameFileName -eq $Null -and $stackFrameFileName -ne $thisModuleFileName -and $i -ge 0)
-	
-    $stackFrameDirectory = (Get-Location).Path
-    # A stack frame representing a call from the console will have ScriptName equal to $Null.  A  
-    # stack frame representing a call from a script file (whether from the root of the file or 
-    # from a function) will have a non-null ScriptName.
-    if ($stackFrameFileName -ne $Null -and $stackFrameFileName -ne $thisModuleFileName)
+    $thisModuleDirectory = $null
+    if (-not [string]::IsNullOrWhiteSpace($thisModuleFileName))
     {
-        $stackFrameDirectory = Split-Path -Path $stackFrameFileName -Parent
+	    $thisModuleDirectory = Split-Path -Path $thisModuleFileName -Parent
     }
 
-	return $stackFrameDirectory
+    $frameCount = $callStack.Count
+    # Start from the 2nd stack frame as we've already read the details of the 1st stack frame.
+    $i = 1
+	$stackFrameFileName = $Null
+	$stackFrameDirectory = $Null
+
+    # We want to walk up the call stack out of the module directory and stop at the top-most 
+    # script, the script that presumably the user is calling.  
+    
+    # We don't want to stop at the first stack frame outside the module directory because that may 
+    # be a low-level script or function the user knows nothing about.  
+
+    # We don't want to automatically keep going to the top-most frame in the call stack because, 
+    # if the script is being called manually, the top-most frame will represent the PowerShell 
+    # console the user is running the script from.  We want to save any log file along side the 
+    # script being run, if we can.
+
+    # We can tell stack frames representing scripts from those representing the PowerShell console 
+    # via the ScriptName.  A  stack frame representing a call from a script file (whether from the 
+    # root of the file or from a function) will have a non-null ScriptName.  A stack frame 
+    # representing a call from the console will have ScriptName equal to $Null.  
+	while (($i -eq 1 -or $stackFrameFileName) -and $i -lt $frameCount)
+	{
+		$stackFrame = $callStack[$i]
+		$stackFrameFileName = $stackFrame.ScriptName		
+
+		if ($stackFrameFileName)
+		{
+			$stackFrameDirectory = Split-Path -Path $stackFrameFileName -Parent
+		}
+
+        $i++
+        # ASSUMPTION: All frames will have a ScriptName until we get to the PowerShell console, at 
+        # the top of the call stack.
+	} 
+	
+    $callerDirectory = $stackFrameDirectory
+	if (-not $callerDirectory -or $callerDirectory -eq $thisModuleDirectory)
+	{
+        # No calling script outside of this module directory.  So assume this module is getting 
+        # called directly from the PowerShell console, not from a script.  In that case set the 
+        # caller directory to the current working directory.
+		$callerDirectory = (Get-Location).Path
+	}
+
+	return $callerDirectory
 }
 
 <#
@@ -944,16 +1067,17 @@ function Private_GetAbsolutePath (
 Sets the full path to the log file.
 
 .DESCRIPTION
-Sets configuration setting LogFile.FullPath.  If LogFile.FullPath is changed from the previous 
-value then $_logFileOverwritten will be cleared.
+Sets configuration setting LogFile.FullPathReadOnly.  If LogFile.FullPathReadOnly is changed from 
+the previous value then $_logFileOverwritten will be cleared.
 
 The function checks whether the LogFile.Name specified in the configuration settings is an 
 absolute or a relative path.  If it is relative then the path to the directory the calling script 
-is running in will be prepended to the specified LogFile.Name when setting LogFile.FullPath.
+is running in will be prepended to the specified LogFile.Name when setting 
+LogFile.FullPathReadOnly.
 
 If configuration setting LogFile.IncludeDateInFileName is $True then the date will be included in 
-the LogFile.FullPath file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  For 
-example, "Results_20171129.log".
+the LogFile.FullPathReadOnly file name, in the form: "<log file name>_yyyyMMdd.<file extension>".  
+For example, "Results_20171129.log".
 
 .NOTES
 This function is NOT intended to be exported from this module.
@@ -963,7 +1087,7 @@ function Private_SetLogFilePath ([string]$OldLogFilePath)
 {
     if ([string]::IsNullOrWhiteSpace($script:_logConfiguration.LogFile.Name))
     {
-        $script:_logConfiguration.LogFile.FullPath = ''
+        $script:_logConfiguration.LogFile.FullPathReadOnly = ''
         return
     }
 
@@ -981,9 +1105,9 @@ function Private_SetLogFilePath ([string]$OldLogFilePath)
         $logFilePath = [System.IO.Path]::Combine($directory, $fileName + $fileExtension)
     }
 
-    $script:_logConfiguration.LogFile.FullPath = $logFilePath
+    $script:_logConfiguration.LogFile.FullPathReadOnly = $logFilePath
 
-    if ($script:_logConfiguration.LogFile.FullPath -ne $OldLogFilePath)
+    if ($script:_logConfiguration.LogFile.FullPathReadOnly -ne $OldLogFilePath)
     {
         $script:_logFileOverwritten = $False
     }

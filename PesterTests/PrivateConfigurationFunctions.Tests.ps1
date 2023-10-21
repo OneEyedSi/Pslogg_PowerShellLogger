@@ -78,6 +78,146 @@ InModuleScope Pslogg {
         } 
     }
 
+    Describe 'GetCallerDirectory' {
+        BeforeAll {
+            $des_PsloggModulePath = 'C:\Test\Modules\pslogg\2.1.2'
+            $des_ScriptDirectoryPath = 'C:\Test'
+            $des_CurrentConsoleDirectoryPath = 'C:\Test\CurrentConsoleDirectory'
+
+            Mock Get-Location { return @{ Path = $des_CurrentConsoleDirectoryPath } }
+
+            function GetStackFrames ([string[]]$ScriptPaths)
+            {
+                $stackFrames = @()
+                foreach ($scriptPath in $ScriptPaths)
+                {
+                    $fakeStackFrame = @{ ScriptName = $scriptPath }
+                    $stackFrames += $fakeStackFrame
+                }
+
+                return $stackFrames
+            }
+
+            function GetScriptPaths ([string]$DirectoryPath, [string[]]$ScriptNames)
+            {
+                $scriptPaths = @()
+                foreach ($scriptName in $ScriptNames)
+                {
+                    $scriptPath = @( Join-Path $DirectoryPath $scriptName )
+                    $scriptPaths += $scriptPath
+                }
+
+                return $scriptPaths
+            }
+
+            function GetModuleScriptNames ([string[]]$ScriptNames)
+            {
+                return GetScriptPaths -DirectoryPath $des_PsloggModulePath -ScriptNames $ScriptNames
+            }
+
+            function GetExternalScriptNames ([string[]]$ScriptNames)
+            {
+                return GetScriptPaths -DirectoryPath $des_ScriptDirectoryPath -ScriptNames $ScriptNames
+            }
+        }
+
+        Context 'Call stack is Null' {
+            BeforeAll {
+                Mock Get-PSCallStack { return $Null }
+            }
+
+            It 'returns $Null when call stack is $Null' {
+                Private_GetCallerDirectory | Should -Be $Null
+            }
+        }
+
+        Context 'Call stack has no stack frames' {
+            BeforeAll {
+                Mock Get-PSCallStack { return @() }
+            }
+
+            It 'returns $Null when call stack has no stack frames' {
+                Private_GetCallerDirectory | Should -Be $Null
+            }
+        }
+
+        Context 'Calling Pslogg from PowerShell console' {
+
+            It 'returns path to console working directory when call stack has single stack frame representing module file' {
+                $scriptNames = @( Join-Path $des_PsloggModulePath 'Pslogg.psm1' )
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+            
+            It 'returns path to console working directory when call stack has single stack frame without script name' {
+                $scriptNames = @($Null)
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+
+            It 'returns path to console working directory when call stack has two stack frames representing module files' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+
+            It 'returns path to console working directory when single non-module call stack frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += $Null
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_CurrentConsoleDirectoryPath
+            }
+        }
+
+        Context 'Calling Pslogg from script' {
+
+            It 'returns path to script directory when single non-module stack frame has script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when multiple non-module stack frames have script names' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script1.ps1','Script2.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when non-module stack frame has script name and top-level frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script.ps1')
+                $scriptNames += $Null
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+
+            It 'returns path to script directory when multiple non-module stack frames have script names and top-level frame has no script name' {
+                $scriptNames = GetModuleScriptNames 'Pslogg.psm1','Configuration.ps1'
+                $scriptNames += (GetExternalScriptNames 'Script1.ps1','Script2.ps1')
+                $stackFrames = GetStackFrames $scriptNames
+                Mock Get-PSCallStack { return $stackFrames }
+
+                Private_GetCallerDirectory | Should -Be $des_ScriptDirectoryPath
+            }
+        }
+    }
+
     Describe "SetLogFilePath" {    
         BeforeAll { 
             function GetFileNameFromTemplate ([string]$FileNameTemplate, [switch]$IncludeDateInFileName)
@@ -98,7 +238,7 @@ InModuleScope Pslogg {
             {
                 $fileNameFromConfiguration = GetFileNameFromTemplate -FileNameTemplate $NewFileNameTemplate
 
-                $script:_logConfiguration.LogFile.FullPath = $ExistingFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $ExistingFileName
                 $script:_logConfiguration.LogFile.Name = $fileNameFromConfiguration
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $IncludeDateInFileName
                 $script:_logFileOverwritten = $True
@@ -107,7 +247,7 @@ InModuleScope Pslogg {
             }
         }
 
-        It 'sets $script:_logConfiguration.LogFile.FullPath to configuration LogFile.Name' {
+        It 'sets $script:_logConfiguration.LogFile.FullPathReadOnly to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate
@@ -115,10 +255,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         }     
 
-        It 'adds date to $script:_logConfiguration.LogFile.FullPath if LogFile.IncludeDateInFileName configuration value is set' {
+        It 'adds date to $script:_logConfiguration.LogFile.FullPathReadOnly if LogFile.IncludeDateInFileName configuration value is set' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\New\New${dateText}.log'
             $expectedFileName = GetFileNameFromTemplate -FileNameTemplate $newFileNameTemplate `
@@ -127,10 +267,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         }
 
-        It 'leaves $script:_logConfiguration.LogFile.FullPath unchanged if identical to configuration LogFile.Name' {
+        It 'leaves $script:_logConfiguration.LogFile.FullPathReadOnly unchanged if identical to configuration LogFile.Name' {
             $existingFileName = 'C:\Original\old.log'
             $newFileNameTemplate = 'C:\Original\old.log'
             $expectedFileName = $existingFileName
@@ -138,10 +278,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
         }
 
-        It 'leaves $script:_logConfiguration.LogFile.FullPath unchanged if existing file name includes today''s date' {
+        It 'leaves $script:_logConfiguration.LogFile.FullPathReadOnly unchanged if existing file name includes today''s date' {
             $fileNameTemplate = 'C:\Test\Test${dateText}.log'
             $existingFileName = GetFileNameFromTemplate -FileNameTemplate $fileNameTemplate `
                 -IncludeDateInFileName
@@ -150,10 +290,10 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
         } 
 
-        It 'updates $script:_logConfiguration.LogFile.FullPath if existing file name includes old date' {
+        It 'updates $script:_logConfiguration.LogFile.FullPathReadOnly if existing file name includes old date' {
             $fileNameTemplate = 'C:\Test\Test${dateText}.log'
             $oldDate = Get-Date -Year 2018 -Month 1 -Day 15
             $existingFileName = $ExecutionContext.InvokeCommand.ExpandString($fileNameTemplate)
@@ -163,7 +303,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
         } 
 
         It 'leaves $script:_logFileOverwritten unchanged if log file path not updated' {
@@ -174,7 +314,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
             $script:_logFileOverwritten | Should -Be $True
         }
 
@@ -187,7 +327,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $existingFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $existingFileName
             $script:_logFileOverwritten | Should -Be $True
         } 
 
@@ -200,7 +340,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $newFileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
             $script:_logFileOverwritten | Should -Be $False
         }
 
@@ -214,7 +354,7 @@ InModuleScope Pslogg {
             TestLogFileConfiguration -ExistingFileName $existingFileName `
                 -NewFileNameTemplate $fileNameTemplate -IncludeDateInFileName
 
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $expectedFileName
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $expectedFileName
             $script:_logFileOverwritten | Should -Be $False
         }
     }
@@ -350,7 +490,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected argument to be either a hash table or an array but it is System.String*" 
+                    -ExpectedMessage "*Expected argument to be either a hashtable or an array but it is System.String*" 
         }
 
         It 'throws ArgumentException if CategoryInfoItem is empty array' {
@@ -390,7 +530,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected second element to be a hash table but it is System.String*"
+                    -ExpectedMessage "*Expected second element to be a hashtable but it is System.String*"
         }
 
         It 'returns $True if CategoryInfoItem is two-element array with types @([string], [hashtable])' {
@@ -437,7 +577,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected value to be a hash table but it is System.String*" 
+                    -ExpectedMessage "*Expected value to be a hashtable but it is System.String*" 
         }
 
         It 'throws ArgumentException if CategoryInfoItem is hashtable where second value is not a hashtable' {
@@ -448,7 +588,7 @@ InModuleScope Pslogg {
 
             { Private_ValidateCategoryInfoItem -CategoryInfoItem $testValue } | 
                 Should -Throw -ExceptionType ([ArgumentException]) `
-                    -ExpectedMessage "*Expected value to be a hash table but it is System.String*" 
+                    -ExpectedMessage "*Expected value to be a hashtable but it is System.String*" 
         }
 
         It 'returns $True if CategoryInfoItem is hashtable with single item of types [string]=[hashtable]' {

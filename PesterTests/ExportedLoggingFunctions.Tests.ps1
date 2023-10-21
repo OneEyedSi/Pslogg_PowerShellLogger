@@ -80,7 +80,7 @@ InModuleScope Pslogg {
             $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
             $script:_logConfiguration.LogFile.Name = "$TestDrive\Results.log"
             $script:_messageFormatInfo = GetDefaultMessageFormatInfo
-            $script:_logConfiguration.LogFile.FullPath = GetResetLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly = GetResetLogFilePath
             $script:_logFileOverwritten = $False
         }
 
@@ -653,9 +653,97 @@ InModuleScope Pslogg {
                 # This scenario should never occur.  Pslogg should throw an exception when setting 
                 # LogFileName to an invalid path via Set-LogConfiguration.
                 $script:_logConfiguration.LogFile.Name = $logFileName
-                $script:_logConfiguration.LogFile.FullPath = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterNotCalled
+            }
+
+            It 'does not attempt to write to a log file from PowerShell host when configuration LogFile.WriteFromHost is $False' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+                $callerName = $script:_constCallerConsole
+                # Requires .GetNewClosure() if using a variable within the script block, due to scoping rules.  See Stackoverflow 
+                # "Access External Variable from with-in Mock Script Block (Pester)", https://stackoverflow.com/a/51119000/216440
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterNotCalled
+            }
+
+            It 'does write to a log file from PowerShell host when configuration LogFile.Name is valid path and LogFile.WriteFromHost is $True' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = $script:_constCallerConsole
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
+            It 'does write to a log file from PowerShell host when configuration LogFile.Name is valid path, LogFile.WriteFromHost is $False but -WriteToFile is set' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = $script:_constCallerConsole
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost -WriteToFile
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
+            It 'does not attempt to write to a log file from script when configuration LogFile.WriteFromScript is $False' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterNotCalled
+            }
+
+            It 'does write to a log file from script when configuration LogFile.Name is valid path and LogFile.WriteFromScript is $True' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost
+
+                AssertFileWriterCalled -LogFilePath $logFileName -OverwriteLogFile $True -LogFileOverwritten $False
+            }
+
+            It 'does not attempt to write to a log file from script when LogFile.WriteFromScript is $True but -DoNotWriteToFile is set' {
+                $logFileName = 'C:\Test\Test.log'
+                $script:_logConfiguration.LogFile.Name = $logFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
+                $script:_logConfiguration.LogFile.WriteFromScript = $True
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logFileOverwritten = $False
+                $callerName = 'Somescript.ps1'
+                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                
+                Write-LogMessage -Message 'hello world' -WriteToHost -DoNotWriteToFile
 
                 AssertFileWriterNotCalled
             }
@@ -693,7 +781,7 @@ InModuleScope Pslogg {
             }
             
             BeforeEach {
-                RemoveLogFile -Path $script:_logConfiguration.LogFile.FullPath
+                RemoveLogFile -Path $script:_logConfiguration.LogFile.FullPathReadOnly
             }
 
             It 'creates a log file when configuration LogFile.Name set and LogFile.Overwrite cleared, and log file does not exist' {
@@ -701,7 +789,7 @@ InModuleScope Pslogg {
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Exist
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Exist
             }
 
             It 'creates a log file when configuration LogFile.Name and LogFile.Overwrite set, and log file does not exist' {
@@ -709,24 +797,24 @@ InModuleScope Pslogg {
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Exist
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Exist
             }
 
             It 'appends to existing log file when configuration LogFile.Overwrite cleared' {
                 $script:_logConfiguration.LogFile.Overwrite = $False
 
-                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPath                
+                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPathReadOnly                
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Exist
-                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Exist
+                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 3
                 $newContent[2] | Should -BeLike '*hello world*'               
                 
                 Write-LogMessage -Message 'second message' -WriteToHost
 
-                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 4
                 $newContent[3] | Should -BeLike '*second message*'
             }
@@ -734,12 +822,12 @@ InModuleScope Pslogg {
             It 'overwrites an existing log file with first logged message when configuration LogFile.Overwrite set' {
                 $script:_logConfiguration.LogFile.Overwrite = $True
 
-                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPath                
+                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPathReadOnly                
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Exist
-                $newContent = ,(Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Exist
+                $newContent = ,(Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 1
                 $newContent[0] | Should -BeLike '*hello world*'
             }
@@ -747,24 +835,24 @@ InModuleScope Pslogg {
             It 'appends subsequent messages to log file when configuration LogFile.Overwrite set' {
                 $script:_logConfiguration.LogFile.Overwrite = $True
 
-                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPath                
+                $originalContent = NewLogFile -Path $script:_logConfiguration.LogFile.FullPathReadOnly                
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Exist
-                $newContent = ,(Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Exist
+                $newContent = ,(Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 1
                 $newContent[0] | Should -BeLike '*hello world*'               
                 
                 Write-LogMessage -Message 'second message' -WriteToHost
 
-                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 2
                 $newContent[1] | Should -BeLike '*second message*'               
                 
                 Write-LogMessage -Message 'third message' -WriteToHost
 
-                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPath)
+                $newContent = (Get-Content -Path $script:_logConfiguration.LogFile.FullPathReadOnly)
                 $newContent.Count | Should -Be 3
                 $newContent[2] | Should -BeLike '*third message*'
             }

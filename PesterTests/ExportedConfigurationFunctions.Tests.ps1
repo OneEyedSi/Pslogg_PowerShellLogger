@@ -221,6 +221,8 @@ InModuleScope Pslogg {
         function GetNewLogFileInfo()
         {
             $logFileInfo = @{
+                                WriteFromScript = $False
+                                WriteFromHost = $True
                                 Name = 'C:\Test\Test.txt'
                                 IncludeDateInFileName = $False
                                 Overwrite = $False
@@ -327,7 +329,7 @@ InModuleScope Pslogg {
         {
             $script:_logConfiguration = Private_DeepCopyHashTable $script:_defaultLogConfiguration
             $script:_messageFormatInfo = GetDefaultMessageFormatInfo
-            $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly = GetDefaultLogFilePath
             $script:_logFileOverwritten = $False
         }
 
@@ -336,7 +338,7 @@ InModuleScope Pslogg {
         {
             $script:_logConfiguration = GetNewConfiguration
             $script:_messageFormatInfo = GetNewMessageFormatInfo
-            $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
             $script:_logFileOverwritten = $True
         }
 
@@ -471,26 +473,26 @@ InModuleScope Pslogg {
                 AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
             }
 
-            It 'updates LogFilePath' {
+            It 'updates LogFile.FullPathReadOnly' {
 
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
-            It 'includes date stamp in LogFilePath if new configuration LogFile.IncludeDateInFileName set' {
+            It 'includes date stamp in LogFile.FullPathReadOnly if new configuration LogFile.IncludeDateInFileName set' {
 
                 $newConfiguration = GetNewConfiguration
                 $newConfiguration.LogFile.IncludeDateInFileName = $True
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
-            It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
+            It 'clears LogFile.Overwrite if configuration LogFile.Name changed' {
                 $script:_logFileOverwritten = $True
 
                 $newConfiguration = GetNewConfiguration
@@ -499,10 +501,10 @@ InModuleScope Pslogg {
                 $script:_logFileOverwritten | Should -Be $False
             }
 
-            It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
+            It 'does not clear LogFile.Overwrite if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
@@ -541,6 +543,131 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogLevel Information 
                     
                 $script:_logConfiguration.LogLevel | Should -Be Information
+            }
+        }
+
+        Context 'Parameter EnableFileLoggingFromScript' {
+            BeforeEach {   
+                $script:_logConfiguration.LogFile.WriteFromScript = $False
+            }
+
+            It 'sets configuration LogFile.WriteFromScript as a member of parameter set "IndividualSettings_AllColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                $newHostTextColours = GetNewConfigurationColour
+
+                Set-LogConfiguration -EnableFileLoggingFromScript -HostTextColorConfiguration $newHostTextColours
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeTrue
+            }
+
+            It 'sets configuration LogFile.WriteFromScript as a member of parameter set "IndividualSettings_IndividualColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                                
+                Set-LogConfiguration -EnableFileLoggingFromScript -ErrorTextColor DarkYellow
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeTrue
+            }
+
+            It 'sets configuration LogFile.WriteFromScript as a member of the default parameter set' {
+                                
+                Set-LogConfiguration -EnableFileLoggingFromScript
+                    
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeTrue
+            }
+        }        
+
+        Context 'Parameter DisableFileLoggingFromScript' {
+
+            It 'clears configuration LogFile.WriteFromScript as a member of parameter set "IndividualSettings_AllColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                $newHostTextColours = GetNewConfigurationColour
+
+                Set-LogConfiguration -DisableFileLoggingFromScript -HostTextColorConfiguration $newHostTextColours
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeFalse
+            }
+
+            It 'clears configuration LogFile.WriteFromScript as a member of parameter set "IndividualSettings_IndividualColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                                
+                Set-LogConfiguration -DisableFileLoggingFromScript -ErrorTextColor DarkYellow
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeFalse
+            }
+
+            It 'clears configuration LogFile.WriteFromScript as a member of the default parameter set' {
+                                
+                Set-LogConfiguration -DisableFileLoggingFromScript
+                    
+                $script:_logConfiguration.LogFile.WriteFromScript | Should -BeFalse
+            }
+        } 
+
+        Context 'Parameter EnableFileLoggingFromHost' {
+            BeforeEach {   
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+            }
+
+            It 'sets configuration LogFile.WriteFromHost as a member of parameter set "IndividualSettings_AllColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                $newHostTextColours = GetNewConfigurationColour
+
+                Set-LogConfiguration -EnableFileLoggingFromHost -HostTextColorConfiguration $newHostTextColours
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeTrue
+            }
+
+            It 'sets configuration LogFile.WriteFromHost as a member of parameter set "IndividualSettings_IndividualColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                                
+                Set-LogConfiguration -EnableFileLoggingFromHost -ErrorTextColor DarkYellow
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeTrue
+            }
+
+            It 'sets configuration LogFile.WriteFromHost as a member of the default parameter set' {
+                                
+                Set-LogConfiguration -EnableFileLoggingFromHost
+                    
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeTrue
+            }
+        }
+
+        Context 'Parameter DisableFileLoggingFromHost' {
+            BeforeEach {   
+                $script:_logConfiguration.LogFile.WriteFromHost = $False
+            }
+
+            It 'clears configuration LogFile.WriteFromHost as a member of parameter set "IndividualSettings_AllColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                $newHostTextColours = GetNewConfigurationColour
+
+                Set-LogConfiguration -DisableFileLoggingFromHost -HostTextColorConfiguration $newHostTextColours
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeFalse
+            }
+
+            It 'clears configuration LogFile.WriteFromHost as a member of parameter set "IndividualSettings_IndividualColors"' {
+                $script:_logConfiguration.HostTextColor.Error = 'Red'
+                                
+                Set-LogConfiguration -DisableFileLoggingFromHost -ErrorTextColor DarkYellow
+                    
+                $script:_logConfiguration.HostTextColor.Error | Should -Be DarkYellow
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeFalse
+            }
+
+            It 'clears configuration LogFile.WriteFromHost as a member of the default parameter set' {
+                                
+                Set-LogConfiguration -DisableFileLoggingFromHost
+                    
+                $script:_logConfiguration.LogFile.WriteFromHost | Should -BeFalse
             }
         }
 
@@ -588,7 +715,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
             It 'includes date stamp in LogFilePath if LogFile.IncludeDateInFileName set' {
@@ -598,7 +725,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath -IncludeDateInFileName
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
             It 'does not include date stamp in LogFilePath if LogFile.IncludeDateInFileName cleared' {
@@ -608,7 +735,7 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $newLogFilePath = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
             It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
@@ -623,7 +750,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
                 Set-LogConfiguration -LogConfiguration $newConfiguration
@@ -667,7 +794,7 @@ InModuleScope Pslogg {
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -IncludeDateInFileName
@@ -678,7 +805,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath -IncludeDateInFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -IncludeDateInFileName
@@ -722,7 +849,7 @@ InModuleScope Pslogg {
             It 'clears LogFileOverwritten if calculated LogFilePath changed' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath -IncludeDateInFileName
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath -IncludeDateInFileName
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $True
 
                 Set-LogConfiguration -ExcludeDateFromFileName
@@ -733,7 +860,7 @@ InModuleScope Pslogg {
             It 'does not clear LogFileOverwritten if calculated LogFilePath unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
-                $script:_logConfiguration.LogFile.FullPath = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
                 $script:_logConfiguration.LogFile.IncludeDateInFileName = $False
 
                 Set-LogConfiguration -ExcludeDateFromFileName
@@ -1150,7 +1277,9 @@ InModuleScope Pslogg {
             It 'sets multiple configuration properties if multiple parameters are set' {
                 $script:_logFileOverwritten = $True
 
-                Set-LogConfiguration -LogLevel Verbose -LogFileName 'C:\Test\Test.txt' `
+                Set-LogConfiguration -LogLevel Verbose `
+                    -DisableFileLoggingFromScript -EnableFileLoggingFromHost `
+                    -LogFileName 'C:\Test\Test.txt' `
                     -ExcludeDateFromFileName -AppendToLogFile -WriteToStreams `
                     -MessageFormat '{MessageLevel} | {Message}' `
                     -CategoryInfoItem 'FileCopy', @{Color = 'DarkCyan'} `
@@ -1169,30 +1298,34 @@ InModuleScope Pslogg {
                 AssertMessageFormatInfoMatchesReference `
                     -ReferenceHashTable $referenceMessageFormatInfo
 
-                $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
                 $script:_logFileOverwritten | Should -Be $False
             }
         }
 
         Context 'Mutually exclusive switch parameter validation' {
 
-            It 'throws exception if switches IncludeDateInFileName and ExcludeDateFromFileName are both set' {
-                $newHostTextColours = GetNewConfigurationColour
+            It 'throws exception if switches EnableFileLoggingFromScript and DisableFileLoggingFromScript are both set' {
+                { Set-LogConfiguration -EnableFileLoggingFromScript -DisableFileLoggingFromScript } | 
+                    Should -Throw 'Only one FileWriteFromScript switch parameter may be set*'
+            }
 
+            It 'throws exception if switches EnableFileLoggingFromHost and DisableFileLoggingFromHost are both set' {
+                { Set-LogConfiguration -EnableFileLoggingFromHost -DisableFileLoggingFromHost } | 
+                    Should -Throw 'Only one FileWriteFromHost switch parameter may be set*'
+            }
+
+            It 'throws exception if switches IncludeDateInFileName and ExcludeDateFromFileName are both set' {
                 { Set-LogConfiguration -IncludeDateInFileName -ExcludeDateFromFileName } | 
                     Should -Throw 'Only one FileName switch parameter may be set*'
             }
 
             It 'throws exception if switches OverwriteLogFile and AppendToLogFile are both set' {
-                $newHostTextColours = GetNewConfigurationColour
-
                 { Set-LogConfiguration -OverwriteLogFile -AppendToLogFile } | 
                     Should -Throw 'Only one LogFileWriteBehavior switch parameter may be set*'
             }
 
             It 'throws exception if switches WriteToHost and WriteToStreams are both set' {
-                $newHostTextColours = GetNewConfigurationColour
-
                 { Set-LogConfiguration -WriteToHost -WriteToStreams } | 
                     Should -Throw 'Only one Destination switch parameter may be set*'
             }
@@ -1212,7 +1345,7 @@ InModuleScope Pslogg {
             AssertMessageFormatInfoMatchesReference -ReferenceHashTable $newMessageFormatInfo
 
             $newLogFilePath = GetNewLogFilePath
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $newLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
 
             $script:_logFileOverwritten | Should -Be $True
         }
@@ -1233,12 +1366,12 @@ InModuleScope Pslogg {
             AssertMessageFormatInfoMatchesReference -ReferenceHashTable $defaultMessageFormatInfo
         }
 
-        It 'resets LogFile.FullPath to default value' {
+        It 'resets LogFile.FullPathReadOnly to default value' {
 
             Reset-LogConfiguration
 
             $defaultLogFilePath = GetDefaultLogFilePath
-            $script:_logConfiguration.LogFile.FullPath | Should -Be $defaultLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $defaultLogFilePath
         }
 
         It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
@@ -1252,7 +1385,7 @@ InModuleScope Pslogg {
 
         It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
             $script:_logConfiguration.LogFile.Name = $script:_defaultLogConfiguration.LogFile.Name
-            $script:_logConfiguration.LogFile.FullPath = GetDefaultLogFilePath
+            $script:_logConfiguration.LogFile.FullPathReadOnly = GetDefaultLogFilePath
             $script:_logFileOverwritten = $True
 
             Reset-LogConfiguration

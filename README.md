@@ -206,11 +206,11 @@ configured to include dates in log file names.
 ##### Get the full path of the file messages will be logged to:
 ```powershell
 PS C:\Users\Me> $config = Get-LogConfiguration
-PS C:\Users\Me> $config.LogFile.FullPath 
+PS C:\Users\Me> $config.LogFile.FullPathReadOnly 
 
     C:\Users\Me\Documents\PowerShell\MyTest\Results_20201027.log
 ```
-In contrast to `$config.LogFile.Name`, `$config.LogFile.FullPath` is the absolute path to the 
+In contrast to `$config.LogFile.Name`, `$config.LogFile.FullPathReadOnly` is the absolute path to the 
 log file.  It will include the date, if Pslogg is configured to include dates in log file names.
 
 ##### Get the format of log messages:
