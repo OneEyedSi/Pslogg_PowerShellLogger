@@ -32,6 +32,12 @@ A hashtable with the following keys:
         
         The hashtable has the following keys:
 
+            WriteFromScript: If $True enables logging to a file from a script or module.  The 
+                default value is $True;
+
+            WriteFromHost: If $True enables logging to a file from the PowerShell host.  The 
+                default value is $False;
+
             Name: The name of the log file.  If LogFile.Name is $Null, empty or blank then 
                 messages will not be written to a log file.  
                 
@@ -296,6 +302,26 @@ For example, if the LogLevel is INFORMATION then only messages with a Message Le
 INFORMATION, WARNING or ERROR will be logged.  Messages with a Message Level of DEBUG or 
 VERBOSE will not be logged, as those levels are higher than INFORMATION.
 
+.PARAMETER EnableFileLoggingFromScript
+A switch parameter that, if set, enables logging to a file from a script or module.
+
+-EnableFileLoggingFromScript and -DisableFileLoggingFromScript cannot both be set at the same time.
+
+.PARAMETER DisableFileLoggingFromScript
+A switch parameter that, if set, disables logging to a file from a script or module.
+
+-EnableFileLoggingFromScript and -DisableFileLoggingFromScript cannot both be set at the same time.
+
+.PARAMETER EnableFileLoggingFromHost
+A switch parameter that, if set, enables logging to a file from the PowerShell host.
+
+-EnableFileLoggingFromHost and -DisableFileLoggingFromHost cannot both be set at the same time.
+
+.PARAMETER DisableFileLoggingFromHost
+A switch parameter that, if set, disables logging to a file from the PowerShell host.
+
+-EnableFileLoggingFromHost and -DisableFileLoggingFromHost cannot both be set at the same time.
+
 .PARAMETER LogFileName
 The path to the log file.  
 
@@ -519,6 +545,8 @@ Use parameter -LogConfiguration to update the entire configuration at once:
 							WriteToHost = $True
 							HostTextColor = $hostTextColor
 							LogFile = @{
+                                            WriteFromScript = $False
+                                            WriteFromHost = $True
 											Name = 'Debug.log'
 											IncludeDateInFileName = $False
 											Overwrite = $False
@@ -540,7 +568,8 @@ Use Get-LogConfiguration and Set-LogConfiguration to update the configuration:
 .EXAMPLE
 Set the details of the log file using individual parameters:
 
-    Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName -AppendToLogFile
+    Set-LogConfiguration -LogFileName 'Debug.log' -ExcludeDateFromFileName `
+        -AppendToLogFile -EnableFileLoggingFromHost
 
 .EXAMPLE
 Set the LogLevel and MessageFormat using individual parameters:
@@ -632,6 +661,22 @@ function Set-LogConfiguration
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
         [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$EnableFileLoggingFromScript,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$DisableFileLoggingFromScript,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$EnableFileLoggingFromHost,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
+        [switch]$DisableFileLoggingFromHost,
+        
+        [parameter(ParameterSetName="IndividualSettings_AllColors")]
+        [parameter(ParameterSetName="IndividualSettings_IndividualColors")]
         [string]$LogFileName,
         
         [parameter(ParameterSetName="IndividualSettings_AllColors")]
@@ -708,6 +753,12 @@ function Set-LogConfiguration
 
     # Ensure that mutually exclusive pairs of switch parameters are not both set:
 
+    Private_ValidateSwitchParameterGroup -SwitchList $EnableFileLoggingFromScript,$DisableFileLoggingFromScript `
+    -ErrorMessage "Only one FileWriteFromScript switch parameter may be set when calling the function. FileWriteFromScript switch parameters: -EnableFileLoggingFromScript, -DisableFileLoggingFromScript"
+
+    Private_ValidateSwitchParameterGroup -SwitchList $EnableFileLoggingFromHost,$DisableFileLoggingFromHost `
+    -ErrorMessage "Only one FileWriteFromHost switch parameter may be set when calling the function. FileWriteFromHost switch parameters: -EnableFileLoggingFromHost, -DisableFileLoggingFromHost"
+
     Private_ValidateSwitchParameterGroup -SwitchList $IncludeDateInFileName,$ExcludeDateFromFileName `
 		-ErrorMessage "Only one FileName switch parameter may be set when calling the function. FileName switch parameters: -IncludeDateInFileName, -ExcludeDateFromFileName"
 
@@ -720,6 +771,26 @@ function Set-LogConfiguration
     if (![string]::IsNullOrWhiteSpace($LogLevel))
     {
         $script:_logConfiguration.LogLevel = $LogLevel
+    }
+
+    if ($EnableFileLoggingFromScript.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromScript = $True
+    }
+
+    if ($DisableFileLoggingFromScript.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromScript = $False
+    }
+
+    if ($EnableFileLoggingFromHost.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromHost = $True
+    }
+
+    if ($DisableFileLoggingFromHost.IsPresent)
+    {
+        $script:_logConfiguration.LogFile.WriteFromHost = $False
     }
 
     if (![string]::IsNullOrWhiteSpace($LogFileName))
