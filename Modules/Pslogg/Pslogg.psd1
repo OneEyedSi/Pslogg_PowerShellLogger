@@ -12,7 +12,7 @@
 RootModule = 'Pslogg.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.1.3'
+ModuleVersion = '3.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -105,7 +105,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Bug fix: Change default timestamp format from 12 hour to 24 hour clock'
+        ReleaseNotes = 'Add new configuration settings and parameters to enable and disable writing to log file'
 
     } # End of PSData hashtable
 
