@@ -12,7 +12,7 @@
 RootModule = 'Pslogg.psm1'
 
 # Version number of this module.
-ModuleVersion = '3.0.0'
+ModuleVersion = '3.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -105,7 +105,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Add new configuration settings and parameters to enable and disable writing to log file'
+        ReleaseNotes = 'Add {CallerLineNumber} as a MessageFormat option'
 
     } # End of PSData hashtable
 
