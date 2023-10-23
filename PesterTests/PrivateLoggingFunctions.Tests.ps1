@@ -37,15 +37,21 @@ BeforeDiscovery {
 
 InModuleScope Pslogg {
 
-    Describe 'GetCallerName' {     
+    Describe 'GetCallerInfo' {     
 
         Context 'Get-PSCallStack mocked to return $Null' {
             BeforeAll {
                 Mock Get-PSCallStack { return $Null }
             }
 
-            It 'returns "[UNKNOWN CALLER]"' {
-                Private_GetCallerName | Should -Be "[UNKNOWN CALLER]"          
+            It 'returns Name "[UNKNOWN CALLER]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "[UNKNOWN CALLER]"    
+            } 
+
+            It 'returns LineNumber "[NONE]"' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be "[NONE]"         
             } 
         }    
 
@@ -54,8 +60,14 @@ InModuleScope Pslogg {
                 Mock Get-PSCallStack { return @() }
             }
 
-            It 'returns "[UNKNOWN CALLER]"' {
-                Private_GetCallerName | Should -Be "[UNKNOWN CALLER]"          
+            It 'returns Name "[UNKNOWN CALLER]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "[UNKNOWN CALLER]"    
+            } 
+
+            It 'returns LineNumber "[NONE]"' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be "[NONE]"         
             } 
         }  
 
@@ -63,31 +75,43 @@ InModuleScope Pslogg {
             BeforeAll {
                 Mock Get-PSCallStack { 
                     $callStack = @()
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerInfo'; ScriptLineNumber=15 }
                     $callStack += $stackFrame
                     return $callStack
                 }
             }
 
-            It 'returns "----"' {
-                Private_GetCallerName | Should -Be "----"
+            It 'returns Name "----"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "----"   
+            } 
+
+            It 'returns LineNumber "[NONE]"' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be "[NONE]"  
             } 
         }  
 
-        Context 'Get-PSCallStack mocked so second stack frame has no file name' {
+        Context 'Get-PSCallStack mocked so second stack frame represents the PowerShell console' {
             BeforeAll {
                 Mock Get-PSCallStack { 
                     $callStack = @()
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerInfo'; ScriptLineNumber=15 }
                     $callStack += $stackFrame
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName=$Null }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>'; ScriptLineNumber=1 }
                     $callStack += $stackFrame
                     return $callStack
                 }
             }
 
-            It 'returns "[CONSOLE]"' {
-                Private_GetCallerName | Should -Be "[CONSOLE]"          
+            It 'returns Name "[CONSOLE]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "[CONSOLE]"   
+            } 
+
+            It 'returns LineNumber "[NONE]"' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be "[NONE]"  
             } 
         }   
 
@@ -95,16 +119,22 @@ InModuleScope Pslogg {
             BeforeAll {
                 Mock Get-PSCallStack { 
                     $callStack = @()
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerInfo'; ScriptLineNumber=15 }
                     $callStack += $stackFrame
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName=$Null; FunctionName='<ScriptBlock>'; ScriptLineNumber=25 }
                     $callStack += $stackFrame
                     return $callStack
                 }
             }
 
-            It 'returns "[CONSOLE]"' {
-                Private_GetCallerName | Should -Be "[CONSOLE]"          
+            It 'returns Name "[CONSOLE]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "[CONSOLE]"   
+            } 
+
+            It 'returns LineNumber "[NONE]"' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be "[NONE]"  
             } 
         }  
 
@@ -112,16 +142,22 @@ InModuleScope Pslogg {
             BeforeAll {
                 Mock Get-PSCallStack { 
                     $callStack = @()
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerInfo'; ScriptLineNumber=15 }
                     $callStack += $stackFrame
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='<ScriptBlock>' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='<ScriptBlock>'; ScriptLineNumber=25 }
                     $callStack += $stackFrame
                     return $callStack
                 }
             }
 
-            It 'returns "Script [script name]"' {
-                Private_GetCallerName | Should -Be "Script Test.ps1"
+            It 'returns correct Name "Script [script name]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "Script Test.ps1"   
+            } 
+
+            It 'returns correct LineNumber' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be 25
             } 
         } 
 
@@ -129,17 +165,23 @@ InModuleScope Pslogg {
             BeforeAll {
                     Mock Get-PSCallStack { 
                     $callStack = @()
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerName' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Pslogg.psd1'; FunctionName='Private_GetCallerInfo'; ScriptLineNumber=15 }
                     $callStack += $stackFrame
-                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='TestFunction' }
+                    $stackFrame = New-Object PSObject -Property @{ ScriptName='C:\Test\Test.ps1'; FunctionName='TestFunction'; ScriptLineNumber=25 }
                     $callStack += $stackFrame
                     return $callStack
                 }
             }
 
-            It 'returns "[function name]"' {
-                Private_GetCallerName | Should -Be "TestFunction"
+            It 'returns correct Name "[function name]"' {
+                $callerInfo = Private_GetCallerInfo
+                $callerInfo.Name | Should -Be "TestFunction"   
             } 
+
+            It 'returns correct LineNumber' {
+                $callerInfo = Private_GetCallerInfo   
+                $callerInfo.LineNumber | Should -Be 25
+            }
         }
     }
 

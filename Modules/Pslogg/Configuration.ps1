@@ -125,6 +125,15 @@ A hashtable with the following keys:
                             log is being written to manually from the Powershell console then 
                             '[CONSOLE]' will be displayed.
 
+            {CallerLineNumber}  : The line number within the script that is writing to the log.
+            
+                            When determining the caller all functions in the Pslogg module will be 
+                            ignored; the caller will be the external function or script that calls 
+                            the Pslogg module to write to the log.  
+                                    
+                            If the log is being written to manually from the Powershell console 
+                            then '[NONE]' will be displayed.
+
 			{Category} : The Category of the message.  It will always be displayed in upper case.
 
 			{MessageLevel}    : The Log Level at which the message is being recorded.  For example, the 
@@ -415,6 +424,15 @@ Possible field names are:
                     the log is being written to from a script file, outside any function, the name 
                     of the script file will be displayed.  If the log is being written to manually 
                     from the Powershell console then '[CONSOLE]' will be displayed.
+
+    {CallerLineNumber}  : The line number within the script that is writing to the log.
+    
+                    When determining the caller all functions in the Pslogg module will be 
+                    ignored; the caller will be the external function or script that calls 
+                    the Pslogg module to write to the log.  
+                            
+                    If the log is being written to manually from the Powershell console 
+                    then '[NONE]' will be displayed.
 
 	{Category}    : The Category of the message.  It will always be displayed in upper case.
 

@@ -181,6 +181,8 @@ A hash table with the following keys:
 
         $CallerName :   Replaces field placeholder {CallerName};
 
+        $CallerLineNumber :   Replaces field placeholder {CallerLineNumber};
+
         $MessageLevel   :   Replaces field placeholder {MessageLevel};
 
         $Category    :   Replaces field placeholder {Category};
@@ -195,6 +197,9 @@ A hash table with the following keys:
 
         "CallerName" :   Included if the RawFormat string contains field placeholder 
                             {CallerName};
+
+        "CallerLineNumber" :   Included if the RawFormat string contains field placeholder 
+                            {CallerLineNumber};
 
         "MessageLevel"  :   Included if the RawFormat string contains field placeholder 
                             {MessageLevel};
@@ -260,6 +265,13 @@ function Private_GetMessageFormatInfo([string]$MessageFormat)
     if ($modifiedText -ne $workingFormat)
     {
         $messageFormatInfo.FieldsPresent += "Category"
+        $workingFormat = $modifiedText
+    }
+
+    $modifiedText = $workingFormat -ireplace '{\s*CallerLineNumber\s*}', '${CallerLineNumber}'
+    if ($modifiedText -ne $workingFormat)
+    {
+        $messageFormatInfo.FieldsPresent += "CallerLineNumber"
         $workingFormat = $modifiedText
     }
 

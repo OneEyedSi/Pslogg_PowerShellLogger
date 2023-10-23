@@ -158,9 +158,18 @@ Possible field names are:
                     of the script file will be displayed.  If the log is being written to manually 
                     from the Powershell console then '[CONSOLE]' will be displayed;
 
+	{CallerLineNumber}  : The line number within the script that is writing to the log.
+    
+                    When determining the caller all functions in the Pslogg module will be 
+                    ignored; the caller will be the external function or script that calls the 
+                    Pslogg module to write to the log.  
+                            
+                    If the log is being written to manually from the Powershell console then 
+                    '[NONE]' will be displayed;
+
 	{Category}    : The Message Category.  If no Message Category is explicitly specified when 
                     calling Write-LogMessage the default Category from the logger configuration 
-                    will be used.  The Category will always be displayed in upper case;
+                    will be used;
 
 	{MessageLevel} : The Message Level at which the message is being recorded.  For example, the 
                     message may be an Error message or a Debug message.  The MessageLevel will 
@@ -429,6 +438,7 @@ function Write-LogMessage
     $Timestamp = Get-Date
     $CallerName = ''
     $TextColor = $Null
+    $CallerLineNumber = ''
 
     $messageFormatInfo = $script:_messageFormatInfo
     if ($MessageFormat)
@@ -436,7 +446,18 @@ function Write-LogMessage
         $messageFormatInfo = Private_GetMessageFormatInfo $MessageFormat
     }
 
-    $CallerName = Private_GetCallerName
+    $CallerInfo = Private_GetCallerInfo
+    if ($CallerInfo)
+    {
+        if ($CallerInfo.Name)
+        {
+            $CallerName = $CallerInfo.Name
+        }
+        if ($CallerInfo.LineNumber)
+        {
+            $CallerLineNumber = $CallerInfo.LineNumber
+        }
+    }
 
     # Parameter sets mean either $MessageLevel is supplied or a message level switch, such as 
     # -IsError, but not both.  Of course, they're all optional so none have to be specified, in 
@@ -595,38 +616,51 @@ function Write-LogMessage
 
 <#
 .SYNOPSIS
-Gets the name of the function calling into this module.
+Gets the details of the function or script calling into this module.
 
 .DESCRIPTION
-Walks up the call stack until it finds a stack frame where the ScriptName is not the filename of 
-this module.  
+Gets the details of the function or script calling into this module.  It returns both the name 
+of the calling function or script and the calling line number within that script.
 
-If the call stack cannot be read then the function returns '[UNKNOWN CALLER]'.  
+When determining the caller, this function will skip any functions in this script, returning the 
+details of the first function it encounters outside this script.  This allows other functions in 
+this script to perform their own actions while being able to call down to this function to 
+determine which external function or script called them.
 
-If no stack frame is found with a different ScriptName then the function returns "----".
+This function walks up the call stack until it finds a stack frame where the ScriptName is not the 
+filename of this module. 
 
-If the ScriptName of the first stack frame outside of this module is $Null then the module is 
-being called from the PowerShell console.  In that case the function returns '[CONSOLE]'.  
+.OUTPUTS
+Hashtable.
 
-If the ScriptName of the first stack frame outside of this module is NOT $Null then the module 
-is being called from a script file.  In that case the function will return the the stack frame 
-FunctionName, unless the FunctionName is "<ScriptBlock>".  
+The function outputs a hashtable with two keys:
 
-A FunctionName of "<ScriptBlock>" means the module is being called from the root of a script 
-file, outside of any function.  In that case the function returns 
-"Script <script short file name>".  The script short file name returned will include the file 
-extension but not any path information.
+	Name: The name of the first calling function encountered outside this script.  If this 
+			function is called from the root of a script, outside of a function, the name will be 
+			"Script <script file name>".  The script file name will be just the short file name, 
+			without a path.  If this function is called from the PowerShell console the name will 
+			be "[CONSOLE]".  If no caller is found outside this script the name will be "----".  
+			If, for some reason, it's not possible to read the call stack the name will be 
+			"[UNKNOWN CALLER]".
+	LineNumber: The caller line number, if this function is called from a function or script.  If 
+			this function is called from the PowerShell console, or if no caller is found outside 
+			this script, or if it's not possible to read the call stack, the LineNumber will be 
+			"[NONE]".
 
 .NOTES
 This function is NOT intended to be exported from this module.
 
 #>
-function Private_GetCallerName()
+function Private_GetCallerInfo()
 {
+    $callerInfo = @{}
+    $callerInfo.Name = $script:_constCallerUnknown
+    $callerInfo.LineNumber = $script:_constCallerLineNumberUnknown
+
 	$callStack = Get-PSCallStack
 	if ($null -eq $callStack -or $callStack.Count -eq 0)
 	{
-		return $script:_constCallerUnknown
+		return $callerInfo
 	}
 	
     # Stack frame 0 is this function.  Increasing the index takes us further up the call stack, 
@@ -634,9 +668,10 @@ function Private_GetCallerName()
 	$thisFunctionStackFrame = $callStack[0]
 	$thisModuleFileName = $thisFunctionStackFrame.ScriptName
 	$stackFrameFileName = $thisModuleFileName
-    # Skip this function in the call stack as we've already read it.  We also know there must 
-    # be at least two stack frames in the call stack as this function will only be called from 
-    # another function in this module, so it's safe to skip the first stack frame.
+    $stackFrameLineNumber = $script:_constCallerLineNumberUnknown
+    # Skip this function in the call stack as we've already read it.  There must be at least two 
+    # stack frames in the call stack as something must call this function, so it's safe to skip 
+    # the first stack frame.
 	$i = 1
 	$stackFrameFunctionName = $script:_constCallerFunctionUnknown
 	while ($stackFrameFileName -eq $thisModuleFileName -and $i -lt $callStack.Count)
@@ -644,20 +679,35 @@ function Private_GetCallerName()
 		$stackFrame = $callStack[$i]
 		$stackFrameFileName = $stackFrame.ScriptName
 		$stackFrameFunctionName = $stackFrame.FunctionName
+        $lineNumber = $stackFrame.ScriptLineNumber
+        if (-not $lineNumber)
+        {
+            $stackFrameLineNumber = $script:_constCallerLineNumberUnknown
+        }
+        else 
+        {
+            $stackFrameLineNumber = "$lineNumber"
+        }
 		$i++
 	}
 	
 	if ($null -eq $stackFrameFileName)
 	{
-		return  $script:_constCallerConsole
+        $callerInfo.Name = $script:_constCallerConsole
+        $callerInfo.LineNumber = $script:_constCallerLineNumberUnknown
+		return  $callerInfo
 	}
+
+    $callerInfo.Name = $stackFrameFunctionName
+    $callerInfo.LineNumber = $stackFrameLineNumber
+
 	if ($stackFrameFunctionName -eq '<ScriptBlock>')
 	{
 		$scriptFileNameWithoutPath = (Split-Path -Path $stackFrameFileName -Leaf)
-		return "Script $scriptFileNameWithoutPath"
+        $callerInfo.Name = "Script $scriptFileNameWithoutPath"
 	}
 	
-	return $stackFrameFunctionName
+	return $callerInfo
 }
 
 <#
