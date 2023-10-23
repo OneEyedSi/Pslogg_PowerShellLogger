@@ -3,3 +3,4 @@
 $_constCallerConsole = '[CONSOLE]'
 $_constCallerUnknown = '[UNKNOWN CALLER]'
 $_constCallerFunctionUnknown = '----'
+$_constCallerLineNumberUnknown = '[NONE]'

@@ -41,9 +41,9 @@ InModuleScope Pslogg {
         function GetDefaultMessageFormatInfo ()
         {
             $messageFormatInfo = @{
-                                    RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {MessageLevel} | {Message}'
-                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff'')) | ${CallerName} | ${MessageLevel} | ${Message}'
-                                    FieldsPresent = @('Message', 'Timestamp', 'CallerName', 'MessageLevel')
+                                    RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {CallerName} | {Category} | {MessageLevel} | {Message}'
+                                    WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff'')) | ${CallerName} | ${Category} | ${MessageLevel} | ${Message}'
+                                    FieldsPresent = @('Timestamp', 'CallerName', 'Category', 'MessageLevel', 'Message')
                                 }
             return $messageFormatInfo
         }
@@ -665,10 +665,10 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.Name = $logFileName
                 $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
                 $script:_logConfiguration.LogFile.WriteFromHost = $False
-                $callerName = $script:_constCallerConsole
+                $callerInfo = @{ Name=$script:_constCallerConsole; LineNumber=$script:_constCallerLineNumberUnknown }
                 # Requires .GetNewClosure() if using a variable within the script block, due to scoping rules.  See Stackoverflow 
                 # "Access External Variable from with-in Mock Script Block (Pester)", https://stackoverflow.com/a/51119000/216440
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
@@ -682,8 +682,8 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.WriteFromHost = $True
                 $script:_logConfiguration.LogFile.Overwrite = $True
                 $script:_logFileOverwritten = $False
-                $callerName = $script:_constCallerConsole
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                $callerInfo = @{ Name=$script:_constCallerConsole; LineNumber=$script:_constCallerLineNumberUnknown }
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
@@ -697,8 +697,8 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.WriteFromHost = $False
                 $script:_logConfiguration.LogFile.Overwrite = $True
                 $script:_logFileOverwritten = $False
-                $callerName = $script:_constCallerConsole
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                $callerInfo = @{ Name=$script:_constCallerConsole; LineNumber=$script:_constCallerLineNumberUnknown }
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -WriteToFile
 
@@ -710,8 +710,8 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.Name = $logFileName
                 $script:_logConfiguration.LogFile.FullPathReadOnly = $logFileName
                 $script:_logConfiguration.LogFile.WriteFromScript = $False
-                $callerName = 'Somescript.ps1'
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                $callerInfo = @{ Name='Somescript.ps1'; LineNumber=$script:_constCallerLineNumberUnknown }
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
@@ -725,8 +725,8 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.WriteFromScript = $True
                 $script:_logConfiguration.LogFile.Overwrite = $True
                 $script:_logFileOverwritten = $False
-                $callerName = 'Somescript.ps1'
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                $callerInfo = @{ Name='Somescript.ps1'; LineNumber=$script:_constCallerLineNumberUnknown }
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost
 
@@ -740,8 +740,8 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.WriteFromScript = $True
                 $script:_logConfiguration.LogFile.Overwrite = $True
                 $script:_logFileOverwritten = $False
-                $callerName = 'Somescript.ps1'
-                Mock Private_GetCallerName { return $callerName }.GetNewClosure()
+                $callerInfo = @{ Name='Somescript.ps1'; LineNumber=$script:_constCallerLineNumberUnknown }
+                Mock Private_GetCallerInfo { return $callerInfo }.GetNewClosure()
                 
                 Write-LogMessage -Message 'hello world' -WriteToHost -DoNotWriteToFile
 
@@ -1001,7 +1001,7 @@ InModuleScope Pslogg {
             }
         }
 
-        Context 'Message Format' {
+        Context 'MessageFormat parameter' {
             BeforeAll {
                 Mock Write-Host
             }
@@ -1046,6 +1046,32 @@ InModuleScope Pslogg {
                         { 
                             Write-LogMessage -Message 'hello world' `
                                             -MessageFormat '{CallerName}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only caller line number when -MessageFormat contains only {CallerLineNumber} field' {
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d{1,4}$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallerLineNumber}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes correct caller line number when -MessageFormat contains only {CallerLineNumber} field' {   
+
+                $expectedLineNumber = '123'
+                Mock Private_GetCallerInfo { return @{ Name='TestFunction'; LineNumber=$expectedLineNumber } }          
+                
+                TestMessageFormat `
+                    -ExpectedLoggedText $expectedLineNumber `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallerLineNumber}' `
                                             -WriteToHost 
                         }
             }
@@ -1119,6 +1145,196 @@ InModuleScope Pslogg {
                                             -WriteToHost 
                         }
             }
+        }
+
+        Context 'MessageFormat configuration' {
+            BeforeAll {
+                ResetConfiguration
+                Mock Write-Host
+            }
+            
+            It 'writes only message text when $_messageFormatInfo contains only {Message} field' {
+                # Explicitly set MessageFormat configuration, bypassing Set-LogConfiguration.
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Message}'
+                                                WorkingFormat = '${Message}'
+                                                FieldsPresent = @('Message')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText 'hello world' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{message}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only timestamp with default formatting when $_messageFormatInfo contains only {Timestamp} field' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff}'
+                                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff''))'
+                                                FieldsPresent = @('Timestamp')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'formats timestamp with specified format string when $_messageFormatInfo contains formatted {Timestamp} field' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Timestamp:HH:mm:ss}'
+                                                WorkingFormat = '$($Timestamp.ToString(''HH:mm:ss''))'
+                                                FieldsPresent = @('Timestamp')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d:\d\d:\d\d$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp:HH:mm:ss}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only caller name when $_messageFormatInfo contains only {CallerName} field' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{CallerName}'
+                                                WorkingFormat = '${CallerName}'
+                                                FieldsPresent = @('CallerName')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText 'Script ExportedLoggingFunctions.Tests.ps1' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallerName}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only caller line number when $_messageFormatInfo contains only {CallerLineNumber} field' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{CallerLineNumber}'
+                                                WorkingFormat = '${CallerLineNumber}'
+                                                FieldsPresent = @('CallerLineNumber')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d{1,4}$' -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallerLineNumber}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes correct caller line number when $_messageFormatInfo contains only {CallerLineNumber} field' {   
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{CallerLineNumber}'
+                                                WorkingFormat = '${CallerLineNumber}'
+                                                FieldsPresent = @('CallerLineNumber')
+                                            }
+                $expectedLineNumber = '123'
+                Mock Private_GetCallerInfo { return @{ Name='TestFunction'; LineNumber=$expectedLineNumber } }          
+                
+                TestMessageFormat `
+                    -ExpectedLoggedText $expectedLineNumber `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{CallerLineNumber}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only message level when $_messageFormatInfo contains only {MessageLevel} field' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{MessageLevel}'
+                                                WorkingFormat = '${MessageLevel}'
+                                                FieldsPresent = @('MessageLevel')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText 'INFORMATION' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{MessageLevel}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes only category when $_messageFormatInfo contains only {Category} field and -Category specified' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Category}'
+                                                WorkingFormat = '${Category}'
+                                                FieldsPresent = @('Category')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText 'SUCCESS' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Category}' `
+                                            -WriteToHost `
+                                            -Category 'Success'
+                        }
+            }
+            
+            It 'writes default category when $_messageFormatInfo contains only {Category} field and -Category not specified' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Category}'
+                                                WorkingFormat = '${Category}'
+                                                FieldsPresent = @('Category')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText 'Progress' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Category}' `
+                                            -WriteToHost 
+                        }
+            }
+            
+            It 'writes empty string when $_messageFormatInfo contains only {Category} field and -Category not specified and no default category' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Category}'
+                                                WorkingFormat = '${Category}'
+                                                FieldsPresent = @('Category')
+                                            }
+                $script:_logConfiguration.CategoryInfo.Progress.IsDefault = $False
+                TestMessageFormat `
+                    -ExpectedLoggedText '' `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Category}' `
+                                            -WriteToHost 
+                        }
+            }        
+            
+            It 'writes text to match all fields when $_messageFormatInfo contains multiple fields' {
+                $script:_messageFormatInfo = @{
+                                                RawFormat = '{Timestamp:yyyy-MM-dd HH:mm:ss.fff} | {MessageLevel} | {Message}'
+                                                WorkingFormat = '$($Timestamp.ToString(''yyyy-MM-dd HH:mm:ss.fff'')) | ${MessageLevel} | ${Message}'
+                                                FieldsPresent = @('Timestamp', 'MessageLevel', 'Message')
+                                            }
+                TestMessageFormat `
+                    -ExpectedLoggedText '^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d | INFORMATION | hello world$' `
+                    -DoRegexMatch `
+                    -FunctionUnderTest `
+                        { 
+                            Write-LogMessage -Message 'hello world' `
+                                            -MessageFormat '{Timestamp} | {MessageLevel} | {Message}' `
+                                            -WriteToHost 
+                        }
+            } 
         }
     }
 }
