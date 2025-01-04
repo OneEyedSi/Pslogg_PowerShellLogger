@@ -763,6 +763,10 @@ function Set-LogConfiguration
 
     if ($LogConfiguration -ne $Null)
     {
+        if ($LogConfiguration.LogFile.Overwrite -and -not $script:_logConfiguration.LogFile.Overwrite)
+        {
+            $script:_logFileOverwritten = $False
+        }
         $script:_logConfiguration = Private_DeepCopyHashTable $LogConfiguration
         Private_SetMessageFormat $LogConfiguration.MessageFormat
         Private_SetLogFilePath -OldLogFilePath $oldLogFilePath
@@ -836,6 +840,10 @@ function Set-LogConfiguration
 
     if ($OverwriteLogFile.IsPresent)
     {
+        if (-not $script:_logConfiguration.LogFile.Overwrite)
+        {
+            $script:_logFileOverwritten = $False
+        }
         $script:_logConfiguration.LogFile.Overwrite = $True
     }
 

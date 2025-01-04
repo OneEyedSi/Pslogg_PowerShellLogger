@@ -492,7 +492,7 @@ InModuleScope Pslogg {
                 $script:_logConfiguration.LogFile.FullPathReadOnly | Should -Be $newLogFilePath
             }
 
-            It 'clears LogFile.Overwrite if configuration LogFile.Name changed' {
+            It 'clears LogFileOverwritten if configuration LogFile.Name changed' {
                 $script:_logFileOverwritten = $True
 
                 $newConfiguration = GetNewConfiguration
@@ -501,12 +501,52 @@ InModuleScope Pslogg {
                 $script:_logFileOverwritten | Should -Be $False
             }
 
-            It 'does not clear LogFile.Overwrite if configuration LogFile.Name unchanged' {
+            It 'clears LogFileOverwritten if configuration LogFile.Overwrite changed to $True' {
+                $script:_logFileOverwritten = $True
+
+                $newConfiguration = GetNewConfiguration
+                $newConfiguration.LogFile.Overwrite = $True
+                Set-LogConfiguration -LogConfiguration $newConfiguration
+
+                $script:_logFileOverwritten | Should -Be $False
+            }
+
+            It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
                 $script:_logFileOverwritten = $True
                 $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
                 $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
 
                 $newConfiguration = GetNewConfiguration
+                Set-LogConfiguration -LogConfiguration $newConfiguration
+
+                $script:_logFileOverwritten | Should -Be $True
+            }
+
+            It 'does not clear LogFileOverwritten if configuration LogFile.Overwrite $True and unchanged' {
+                $newConfiguration = GetNewConfiguration
+
+                $script:_logFileOverwritten = $True
+                $script:_logConfiguration.LogFile = GetNewLogFileInfo
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $newConfiguration.LogFile.Name
+
+                $newConfiguration.LogFile.Overwrite = $True
+                
+                Set-LogConfiguration -LogConfiguration $newConfiguration
+
+                $script:_logFileOverwritten | Should -Be $True
+            }
+
+            It 'does not clear LogFileOverwritten if configuration LogFile.Overwrite changed to $False' {
+                $newConfiguration = GetNewConfiguration
+
+                $script:_logFileOverwritten = $True
+                $script:_logConfiguration.LogFile = GetNewLogFileInfo
+                $script:_logConfiguration.LogFile.Overwrite = $True
+                $script:_logConfiguration.LogFile.FullPathReadOnly = $newConfiguration.LogFile.Name
+
+                $newConfiguration.LogFile.Overwrite = $False
+                
                 Set-LogConfiguration -LogConfiguration $newConfiguration
 
                 $script:_logFileOverwritten | Should -Be $True
@@ -869,7 +909,7 @@ InModuleScope Pslogg {
             }
         }
 
-        Context 'Parameter LogFileOverwrite' {
+        Context 'Parameter OverwriteLogFile' {
             BeforeEach {    
                 $script:_logConfiguration.LogFile.Overwrite = $False
             }
@@ -899,6 +939,28 @@ InModuleScope Pslogg {
                 Set-LogConfiguration -OverwriteLogFile
                     
                 $script:_logConfiguration.LogFile.Overwrite | Should -Be $True
+            }
+
+            It 'clears LogFileOverwritten if configuration LogFile.Overwrite was previously $False' {
+                $script:_logFileOverwritten = $True
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Overwrite = $False
+
+                Set-LogConfiguration -OverwriteLogFile
+
+                $script:_logFileOverwritten | Should -Be $False
+            }
+
+            It 'does not clear LogFileOverwritten if configuration LogFile.Overwrite was previously $True' {
+                $script:_logFileOverwritten = $True
+                $script:_logConfiguration.LogFile.Name = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.FullPathReadOnly = GetNewLogFilePath
+                $script:_logConfiguration.LogFile.Overwrite = $True
+
+                Set-LogConfiguration -OverwriteLogFile
+
+                $script:_logFileOverwritten | Should -Be $True
             }
         }
 
@@ -1383,9 +1445,19 @@ InModuleScope Pslogg {
             $script:_logFileOverwritten | Should -Be $False
         }
 
-        It 'does not clear LogFileOverwritten if configuration LogFile.Name unchanged' {
+        It 'clears LogFileOverwritten if configuration LogFile.Overwrite changed to $True' {
+            $script:_logConfiguration.LogFile.Overwrite = $False
+            $script:_logFileOverwritten = $True
+
+            Reset-LogConfiguration
+
+            $script:_logFileOverwritten | Should -Be $False
+        }
+
+        It 'does not clear LogFileOverwritten if configuration LogFile.Name and LogFile.Overwrite unchanged' {
             $script:_logConfiguration.LogFile.Name = $script:_defaultLogConfiguration.LogFile.Name
             $script:_logConfiguration.LogFile.FullPathReadOnly = GetDefaultLogFilePath
+            $script:_logConfiguration.LogFile.Overwrite = $script:_defaultLogConfiguration.LogFile.Overwrite
             $script:_logFileOverwritten = $True
 
             Reset-LogConfiguration
