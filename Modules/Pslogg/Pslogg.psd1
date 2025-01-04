@@ -12,7 +12,7 @@
 RootModule = 'Pslogg.psm1'
 
 # Version number of this module.
-ModuleVersion = '3.1.0'
+ModuleVersion = '3.2.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -30,7 +30,7 @@ Copyright = '(c) 2018 Simon Elms. All rights reserved.'
 Description = 'A PowerShell module for logging messages to the host, to PowerShell streams, or to a log file.'
 
 # Minimum version of the Windows PowerShell engine required by this module
-PowerShellVersion = '5.0'
+PowerShellVersion = '5.1'
 
 # Name of the Windows PowerShell host required by this module
 # PowerShellHostName = ''
@@ -105,7 +105,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Add {CallerLineNumber} as a MessageFormat option'
+        ReleaseNotes = 'Allow log file to be overwritten if LogFile.Overwrite set during a session'
 
     } # End of PSData hashtable
 
